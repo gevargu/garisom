@@ -35,19 +35,19 @@ __b)__ To build and run from the terminal in a Mac OS system:
 __b.1)__ Clone the repository in a desired location in your system.
 
 ```
-git clone https://github.com/gevargu/SOM_Sperry.git
+git clone https://github.com/gevargu/garisom.git
 ```
 
 __b.2)__ Navigate to the repository by usin the command cd:
 
 ```
-cd SOM_Sperry
+cd garisom
 ```
 
 __b.3)__ Run the following command will compile the code and build an executable:
 
 ```
-g++ -std=c++11 -O3 -ffast-math SperryModelCPP.cpp -o modelprog
+g++ -std=c++11 -O3 -ffast-math gainriskSOModelCPP.cpp -o modelprog
 ```
 
 This uses the standard GNU C++ compiler to create the executable file __modelprog.exe__
