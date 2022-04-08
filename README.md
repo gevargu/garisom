@@ -1,4 +1,4 @@
-# Stomatal Optimization Model a.k.a. Sperry Model
+# Gain-Risk Stomatal Optimization Model a.k.a. Sperry Model
 
 __Coding language:__ C++
 
