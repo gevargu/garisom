@@ -44,7 +44,7 @@ __b.2)__ Navigate to the repository by usin the command cd:
 cd SOM_Sperry
 ```
 
-__b.3)__ Run the following command to build an executable:
+__b.3)__ Run the following command will compile the code and build an executable:
 
 ```
 g++ -std=c++11 -O3 -ffast-math SperryModelCPP.cpp -o modelprog
