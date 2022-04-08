@@ -1,4 +1,4 @@
-﻿// Sperry Model -- C++ version for GNU compilers
+﻿// Gain-Risk Stomtal Optimization Model -- C++ version for GNU compilers
 
 #include <stdio.h>
 #include <cmath> // math utility functions
