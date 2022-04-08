@@ -47,7 +47,7 @@ cd garisom
 __b.3)__ Run the following command will compile the code and build an executable:
 
 ```
-g++ -std=c++11 -O3 -ffast-math gainriskSOModelCPP.cpp -o modelprog
+make
 ```
 
 This uses the standard GNU C++ compiler to create the executable file __modelprog.exe__
@@ -58,7 +58,7 @@ This uses the standard GNU C++ compiler to create the executable file __modelpro
 __b.4)__ Run this program from the same folder with this command:
 
 ```
-./modelprog
+./garisom
 ```
 
 __b.5)__ Press <kbd>Command</kbd> + <kbd>C</kbd> if you want to stop the model before it completes (<kbd>Ctrl</kbd> + <kbd>C</kbd> in Windows/Linux)
