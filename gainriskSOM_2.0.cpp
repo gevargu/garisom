@@ -129,6 +129,7 @@ int main() {
     std::cout << "|     INITIALIZING C GAIN VS H RISK MODEL     |" << endl;
     std::cout << " ---------------------------------------------" << endl;
     std::cout << endl;
+    std::cout << " Testing soil texture: " << garisom.paramCells[2][12] << endl;
     garisom.InitialConditions();
     std::cout << endl;
     std::cout << " Testing vg function: " << garisom.rhizor << endl;

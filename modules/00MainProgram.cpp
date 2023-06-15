@@ -21,6 +21,9 @@ void MainProgram::readPARSheet ()
     std::ifstream configFile(mconfigFileName);
     if (!configFile.is_open()){
         std::cout << "UNRECOVERABLE: Failed to open model configuration file: " << mconfigFileName << std::endl;
+        std::cout << "Model stops " << std::endl;
+        std::cout << std::endl;
+        std::exit(1);
     }
 
     long rowCount = -1;
@@ -39,7 +42,7 @@ void MainProgram::readPARSheet ()
     }
 
     // set the parameter and nametable filenames
-    std::string paramFileName = "parameter_data.csv";
+    std::string paramFileName = "parameters.csv";
     
     std::cout << std::endl;
     std::cout << "Reading parameters from " << paramFileName << std::endl;
@@ -47,6 +50,9 @@ void MainProgram::readPARSheet ()
     std::ifstream paramFile(paramFileName);
     if (!paramFile.is_open()) {
         std::cout << "UNRECOVERABLE: Failed to open parameter file " << paramFileName << std::endl;
+        std::cout << "Model stops " << std::endl;
+        std::cout << std::endl;
+        std::exit(1);
     }
 
     // load the string values of all the parameters into an array
@@ -915,7 +921,10 @@ long MainProgram::Rungarisom(){
     
     if (!lrSuccess) {
         std::cout << "Unrecoverable model failure!" << std::endl;
-        return 0; // failure, unrecoverable
+        std::cout << "Model stops " << std::endl;
+        std::cout << std::endl;
+        std::exit(1);
+        //return 0; // failure, unrecoverable
     }
 
     iter_ddOutMod = 0;

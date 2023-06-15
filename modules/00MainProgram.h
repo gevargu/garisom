@@ -164,8 +164,6 @@ public:
     long yearVal; // the temporary variable where we hold the year read from the sheet
     long gs_ar_years[100], gs_ar_starts[100], gs_ar_ends[100], growSeasonCount;
 
-    // Iterator variables
-    long iter_Counter; //how many iterations of this data set have we run? For finding the supply curve
     // Integration variables
     long it, tnm, j, tmax;
     double del, eps, olds;
