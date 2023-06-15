@@ -1,16 +1,16 @@
-# Gain-Risk Stomatal Optimization Model
+# Carbon Gain vs Hydraulic Risk Stomatal Optimization Model V 2.0
 
 __Coding language:__ C++
 
-__Readme author:__ Henry Todd (henry.todd@utah.edu)
+__Authors:__ German Vargas G. & William R.L. Anderegg
 
-__Readme editor:__ German Vargas G. (german.vargas@utah.edu)
+__Contact:__ german.vargas@utah.edu
 
 ------------
 
 ## Introduction:
 
-The model uses a stomatal gain vs. risk optimization (Sperry et al. 2017 -- see references below) combined with a soil water budget to run a continuous growing season simulation, producing stand outputs such as net carbon assimilation (Anet), internal [CO2] (Ci), transpiration (E), total evapotranspiration (ET), and element conductances (k) on an hourly and summary basis (see output details below).
+The model uses a stomatal carbon gain vs. hydraulic risk optimization (Sperry et al. 2017 -- see references below) combined with a soil water budget to run a continuous growing season simulation, producing stand outputs such as net carbon assimilation (Anet), internal [CO2] (Ci), transpiration (E), total evapotranspiration (ET), and element conductances (k) on an hourly and summary basis (see output details below).
 
 ------------
 
@@ -50,11 +50,6 @@ __b.3)__ Run the following command will compile the code and build an executable
 make
 ```
 
-This uses the standard GNU C++ compiler to create the executable file __modelprog.exe__
-- O3 and ffast_math are optimization options.
-- std sets the version of the C++ standard used.
-- o species the output file.
-
 __b.4)__ Run this program from the same folder with this command:
 
 ```
@@ -65,12 +60,12 @@ __b.5)__ Press <kbd>Command</kbd> + <kbd>C</kbd> if you want to stop the model b
 
 This version has also been tested with Visual Studio 2017's compiler with similar optimizations (floating point mode fast, maximum optimization preferring speed). The following files (included in this repository) should be located in the working directory (normally the same directory as the executable) before running:
 	
-  - __parameters.csv__ (plant, site params and program options).
-  - __nametable.csv__ (maps parameter names to row/col locations in the parameters.csv sheet).
+  - __parameters.csv__ (site, atmospheric, soils, stand, plant, hydraulics, and carbon assimilation parameters).
+  - __model_config.csv__ (model controls)
   - __dataset.csv__ (hourly weather drivers).
   - __dataheader.csv__ (a header row for the hourly data output).
   - __sumheader.csv__ (a header row for the summary data output).
-  - __seasonlimits.csv__ (growing season limits, only required if using "sequential year mode" described below)
+  - __seasonlimits.csv__ (growing season limits and yearly atmospheric CO2, only required if using "sequential year mode" described below)
 
 Upon completion, two output files are produced:
 	
@@ -177,24 +172,13 @@ In this mode, plant hydraulics will reset between seasons and plant transpiratio
 
 ## References:
 
+Describing the version 0.1 of the C++ code:
+- Venturas MD, JS Sperry, DM Love, EH Frehner, MG Allred, Y Wang, and WRL Anderegg. (2017). A Stomatal Control Model Based on Optimization of Carbon Gain versus Hydraulic Risk Predicts Aspen Sapling Responses to Drought. New Phytologist 220: 836–50.
+
 Describing the gain/risk algorithm used in the model:
-- Sperry JS, Venturas MD, Anderegg WRL, Mencucinni M, Mackay DS, Wang Y, Love DM (2017) Predicting stomatal responses to the environment from the optimization of photosynthetic gain and hydraulic cost. Plant Cell and Environment 40: 816-830
+- Sperry JS, MD Venturas, WRL Anderegg, M Mencucinni, DS Mackay, Y Wang, and DM Love. (2017). Predicting stomatal responses to the environment from the optimization of photosynthetic gain and hydraulic cost. Plant Cell and Environment 40: 816-830
 
 Describing the original hydraulic model the gain-risk optimization was based on:
-- Sperry JS, Love DM (2015) Tansley Review: What plant hydraulics can tell us about plant responses to climate-change droughts. New Phytologist 207: 14-17.
-- Sperry JS, Wang Y, Wolfe BT, Mackay DS, Anderegg WRL, McDowell NG, Pockman WT (2016) Pragmatic hydraulic theory predicts stomatal responses to climatic water deficits. New Phytologist 212: 577-589
-
-(Full-text PDFs available at http://sperry.biology.utah.edu/publications/)
-
+- Sperry JS, and DM Love (2015) Tansley Review: What plant hydraulics can tell us about plant responses to climate-change droughts. New Phytologist 207: 14-17.
+- Sperry JS, Y Wang, BT Wolfe, DS Mackay, WRL Anderegg, NG McDowell, and WT Pockman. (2016). Pragmatic hydraulic theory predicts stomatal responses to climatic water deficits. New Phytologist 212: 577-589
 -------------
-
-## Contact:
-
-For specific questions about this C++ version of the model, contact:
-- Henry Todd:
-  - henry.todd@utah.edu
-  - hnt1137@gmail.com
-
-- German Vargas G.:
-  - german.vargas@utah.edu
-  - gevargu@gmail.com
