@@ -3,7 +3,7 @@
 
 #define FIO_PRECISION 12
 
-// For data inputs
+// For data inputs // these numbers are arbitrary for the most part, but ensure enough memory
 #define MAX_SUMMARY_COLS 121
 #define MAX_SUMMARY_ROWS 2001
 #define PARAMFILE_MAXROWS 101
@@ -11,7 +11,7 @@
 #define DATAFILE_MAXROWS 2000001
 #define DATAFILE_MAXCOLS 101
 #define CONFIGFILE_MAXROWS 3
-#define CONFIGFILE_MAXCOLS 20
+#define CONFIGFILE_MAXCOLS 30
 
 // For staging the model
 #define STAGE_ID_NONE 0 // use this mode to skip all of the stage code and just run based on param sheet settings (a "normal" run, the default config)
@@ -81,6 +81,14 @@ public:
     // For staging the model
     long stage_ID;
     std::string stageNames[STAGE_ID_FUT_STRESS_NOACCLIM + 1];
+    
+    // the minimum info necessary to identify any historical run
+    std::string name_region = "";
+    std::string name_site = "";
+    std::string name_species = "";
+    // and future
+    std::string name_scen = "";
+    std::string name_model = "";
 
     // Model constants
     const double pi = 3.14159;
@@ -95,9 +103,12 @@ public:
     const double absnir = 0.2; //'absorptivity of near infrared for leaves
 
     // Model configuration
-    bool hysteresis, refilling, ground, soilred, sevap, raining, bucket;
-    bool reset_kmax, nonGS_water, nonGS_evaporation, GS_mode,useGSData, mode_predawns;
+    bool hysteresis, refilling, ground, soilred, sevap, raining, bucket, reset_kmax,nonGS_water;
+    bool nonGS_evaporation, GS_mode,useGSData, mode_predawns, iter_runSupplyCurve,iter_useAreaTable;
+    bool iter_gwEnable,iter_ffcEnable, iter_bagaEnable, iter_yearsAsCount;
     int species_no;
+    long iter_code; // used to override the normal iteration behavior if we want to walk back a half step
+    long iter_Counter; //how many iterations of this data set have we run? For finding the supply curve
 
     // Defining model variables from parameter_data.csv file
     // Site Identifiers & Parameters
@@ -117,7 +128,13 @@ public:
     double leafpercent , ksatp, root_p12, root_p50, stem_p12, stem_p50, leaf_p12, leaf_p50;
     // Carbon Assimilation
     double vmax25, jmax25, lightcomp, qmax, kc25, ko25, comp25, thetac, havmax, hdvmax, svvmax, hajmax, hdjmax, svjmax, lightcurv;
-    
+    // BAGA Optimization
+    double iter_gwDist; //we//ll keep track of the gw dist separately when running iterations, then override the grounddistance variable with this value
+    long iter_ddOutMod; //output offset so we can keep multiple iterations of data
+    double iter_gwInc, iter_gwStart, iter_gwEnd, iter_gwRunning;
+    double iter_ffc, iter_ffcStart, iter_ffcEnd, iter_ffcInc;
+    double iter_baga, iter_bagaStart, iter_bagaEnd, iter_bagaInc, iter_bagaRef, iter_bagaCutoff;
+
     // Used in initial conditions
     long runmean, f, k, z, i, unknowns, t;
     double cutoff, minwind, epsx, sthresh, gmax, gmaxl, patm, pinc, sum;

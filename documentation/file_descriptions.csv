@@ -54,6 +54,18 @@ cell reference,grouping,parameter,description
 51,assimilation,hdjmax,J mol-1; temp-dependency parameters from Leunig 2002
 52,assimilation,svjmax,J mol-1 K-1; temp-dependency parameters from Leunig 2002
 53,assimilation,lightcurv,temp-dependency parameters from Leunig 2002
+54,BAGA_optimizer,BAGA_ref,
+55,BAGA_optimizer,BAGA_start,
+56,BAGA_optimizer,BAGA_end,
+57,BAGA_optimizer,BAGA_inc,
+58,BAGA_optimizer,BAGA_KCO,WLT K dropoff threshold (fraction of reference iteration kmin)
+59,BAGA_optimizer,Gwater_inc,
+60,BAGA_optimizer,Gwater_start,
+61,BAGA_optimizer,Gwater_end,
+62,BAGA_optimizer,FFC_start,
+63,BAGA_optimizer,FFC_end,
+64,BAGA_optimizer,FFC_incr,Note: If FFC start < FFC end_ will start curve gen by incrementing FFC before ground water
+65,assimilation,CiCa_target,
 ,,,
 File: model_controls.csv,,,
 Description: This file has the instructions associated with the model running configuration,,,
@@ -72,6 +84,17 @@ cell reference,grouping,parameter,description
 12,climate,nonGS_evaporation,soil evaporation during non growing season (nonGS)  if nonGS_water == on. Values: off; 1 on
 13,stand,multi_sp,turns on/off whether our model configuration has 1 species per site (monodominant) or multiple species per site (diverse). Values: off; on
 14,stand,species_no,number of species/PFT
+15,BAGA_optimizer,runSupplyCurve,turns all iteration on/off
+16,BAGA_optimizer,useAreaTable,if y will pull GA:BA_ LA:BA_ LAI from AreaData table per year and per site
+17,BAGA_optimizer,iterGroundWater,
+18,BAGA_optimizer,iterFFC,
+19,BAGA_optimizer,iterBAGA,Increate the BA:GA to find the basal area that puts the stand in ecohydrological equilibrium with the weather conditions
+20,BAGA_optimizer,yearsAsCounts,"The ""year"" values represent different data set ID's_ not actual years. In this mode the ""start"" year is always 0"
+21,BAGA_optimizer,SiteCode,Used for finding data from other sheets (like the AreaData sheet)
+22,Chain_Runs,Filename,"When the run terminates_ will look for an OPEN workbook with this name and execute the model run on it. Use this to ""chain"" runs for different sites together. Auto-save the workbook (as OUTPUT_workbookName.xlsm) on completion of iteration"
+23,Chain_Runs,BAGA_Send,Send the optimated BA:GA to the next program in the chain?
+24,Assimilation,ci_acclimation,Acclimate internal CO2
+25,BAGA_optimizer,GS_Data_OPT,
 ,,,
 File: seasonlimits.csv,,,
 Description: Each row represents a year. Each column a yearly characteristic.,,,

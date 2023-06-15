@@ -73,6 +73,7 @@ void MainProgram::readPARSheet ()
 }
 
 /* Set model configuration */
+// I placed the  instructions from readIterationSettings() function in v 0.1 here
 void MainProgram::setConfig(){
     // Model Configurations
     std::cout << "              Xylem hysteresis: "; 
@@ -98,9 +99,11 @@ void MainProgram::setConfig(){
     if(configCells[2][3] == "on"){
         mode_predawns = true;
         std::cout << "On" << endl;
+        std::cout << "MODE: Running from predawn inputs (in rain column, MPa). Soil sim disabled." << std::endl;
     } else {
         mode_predawns = false;
         std::cout << "Off" << endl;
+        std::cout << "MODE: Running from soil simulation (calculated predawns)." << std::endl;
     }
     std::cout << "             Ground water flow: "; 
     // turns on/off groundwater flow. Values: off; on
@@ -183,13 +186,89 @@ void MainProgram::setConfig(){
         nonGS_evaporation = false;
         std::cout << "Off" << endl;
     }
-    std::cout << "Multi-Species Mode: ";
+    std::cout << "            Multi-Species Mode: ";
     // soil evaporation during non growing season (nonGS)  if nonGS_water == on. Values: off; on
     if(configCells[2][13] == "on"){
         species_no = std::atoi(configCells[2][14].c_str());
         std::cout << "On" << endl;
     } else {
         species_no = 1;
+        std::cout << "Off" << endl;
+    }
+
+    std::cout << "        Iteration Supply Curve: ";
+    // Turns on the iterations in the BAGA optimization routine. Values: off; on
+    if(configCells[2][15] == "on"){
+        iter_runSupplyCurve = true;
+        std::cout << "On" << endl;
+    } else {
+        iter_runSupplyCurve = false;
+        std::cout << "Off" << endl;
+    }
+
+    std::cout << "                Use Area Table: ";
+    // Are we using BA:GA values from another csv file. Values: off; on
+    if(configCells[2][16] == "on"){
+        iter_useAreaTable = true;
+        std::cout << "On" << endl;
+    } else {
+        iter_useAreaTable = false;
+        std::cout << "Off" << endl;
+    }
+
+    std::cout << "          Iterate Ground Water: ";
+    // Iterating ground water in for each stand. Values: off; on
+    if(configCells[2][17] == "on"){
+        iter_gwEnable = true;
+        std::cout << "On" << endl;
+    } else {
+        iter_gwEnable = false;
+        std::cout << "Off" << endl;
+    }
+    // we use 1 value for all species, for now...
+    iter_gwInc = std::atof(paramCells[2][59].c_str()); //how much should be increment the ground water every iteration? Smaller = higher resolution supply curve
+    iter_gwStart = std::atof(paramCells[2][60].c_str()); //Some data sets may not respond to increasing ground water until a high threshold, so can start with a minimum level and increment from there
+    iter_gwEnd = std::atof(paramCells[2][61].c_str());
+
+    std::cout << "  Iterate Field Capacity (FFC): ";
+    // Iterating ground water in for each stand. Values: off; on
+    if(configCells[2][18] == "on"){
+        iter_ffcEnable = true;
+        std::cout << "On" << endl;
+    } else {
+        iter_ffcEnable = false;
+        std::cout << "Off" << endl;
+    }
+    // we use 1 value for all species, for now...
+    iter_ffcInc = std::atof(paramCells[2][64].c_str());
+    iter_ffcStart = std::atof(paramCells[2][62].c_str());
+    iter_ffcEnd = std::atof(paramCells[2][63].c_str());
+
+    std::cout << "           Iterate Field BA:GA: ";
+    // Iterating BA:GA for each stand. Values: off; on
+    if(configCells[2][19] == "on"){
+        iter_bagaEnable = true;
+        std::cout << "On" << endl;
+    } else {
+        iter_bagaEnable = false;
+        std::cout << "Off" << endl;
+    }
+    // we use 1 value for all species, for now... I should move this to initialization function
+    iter_bagaInc = std::atof(paramCells[2][57].c_str());
+    iter_bagaStart = std::atof(paramCells[2][55].c_str());
+    iter_bagaEnd = std::atof(paramCells[2][56].c_str());
+    iter_bagaRef = std::atof(paramCells[2][54].c_str());
+    iter_bagaCutoff = std::atof(paramCells[2][58].c_str());
+    iter_bagaRef = 1.0; //156.269; // 1.0; // TODO TEMP can remove after param sheets updated
+    iter_bagaEnd = 500.0; // TODO TEMP " -> for bisection method, allow extreme range
+
+    std::cout << "       Iterate Years as Counts: ";
+    // Iterating ground water in for each stand. Values: off; on
+    if(configCells[2][20] == "on"){
+        iter_yearsAsCount = true;
+        std::cout << "On" << endl;
+    } else {
+        iter_yearsAsCount = false;
         std::cout << "Off" << endl;
     }
 }
@@ -710,6 +789,11 @@ short MainProgram::setIterationParams(long &iter){
     }
 }
 
+/* Iteration settings*/
+// It seems this function was deprecated in version 0.1 
+// parameters still used: i_iter_bagaInc 
+// All these settings should come from the model control now
+
 /* Growing season boolean */
 bool MainProgram::isInGrowSeasonSimple(){
     if (useGSData){
@@ -820,6 +904,7 @@ bool MainProgram::locateRanges() {
     return true;
 }
 
+
 /* Running the model */ 
 long MainProgram::Rungarisom(){
     //Dim ddOutMod As Long // moved to module global
@@ -832,10 +917,8 @@ long MainProgram::Rungarisom(){
         std::cout << "Unrecoverable model failure!" << std::endl;
         return 0; // failure, unrecoverable
     }
-    
-    if (mode_predawns == true){
-        std::cout << "MODE: Running from predawn inputs (in rain column, MPa). Soil sim disabled." << std::endl;
-    } else {
-        std::cout << "MODE: Running from soil simulation (calculated predawns)." << std::endl;
-    }
+
+    iter_ddOutMod = 0;
+    iter_Counter = 0;
+    iter_code = 0;
 }
