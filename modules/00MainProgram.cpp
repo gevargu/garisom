@@ -330,7 +330,7 @@ void MainProgram::readGSSheet()
 
                for (int rC = 0; rC < row.size(); rC++) {
                 	if (rowCount < 100 && rowCount >= 0 && rC < 10 && rC >= 0) {
-						GSCells[rowCount + 1][rC + 1] = std::atol(row[rC].c_str()); // load array as double
+						GSCells[rowCount + 1][rC + 1] = row[rC]; // load array as string
                         // all data i/o is in double
 					}
                	}
@@ -342,6 +342,23 @@ void MainProgram::readGSSheet()
     } else {
         std::cout << "Skipping GS RANGE load -- Years will be treated as independent." << std::endl;
     }
+}
+
+void MainProgram::readGrowSeasonData(){
+    long startRow = 2; // skipping the header
+    long startCol = 1;
+
+    // assumed table layout:
+    /* Year  |  Start  |  End  | Ca_ppm,  with "Year" label as the named cell above */
+    long gsC = -1;//growSeasonCount = gsC
+    do {
+        gsC = gsC + 1;
+        gs_ar_years[gsC] = std::atol(GSCells[startRow + gsC][1].c_str()); // Years
+        gs_ar_starts[gsC] = std::atol(GSCells[startRow + gsC][2].c_str()); // Start 
+        gs_ar_ends[gsC] = std::atol(GSCells[startRow + gsC][3].c_str()); // End
+        gs_ar_Ca[gsC] = std::atof(GSCells[startRow + gsC][4].c_str()); // Atmospheric CO2 (Ca_ppm)
+    } while (!(std::atol(GSCells[startRow + gsC + 1][startCol].c_str()) == 0)); // hopefully we get zeros in the blank space...
+    //Loop Until IsEmpty(gsRange.Offset(gsC + 1, 0).Value2)
 }
 
 /* Reading climate forcing and output data sheets*/
@@ -904,21 +921,48 @@ bool MainProgram::locateRanges() {
       // fix this to use the nameTable when we have time to re-run all the acclimations... or write a script to update all the nametables
       // note: this is specific to the BA/GA optimization
 
-      std::cout << "Read site and scenario names (region | site | species | scenario | model): " << name_region << " | " << name_site << " | " << name_species << " | " << name_scen << " | " << name_model << std::endl;
+      //std::cout << "Read site and scenario names (region | site | species | scenario | model): " << name_region << " | " << name_site << " | " << name_species << " | " << name_scen << " | " << name_model << std::endl;
 
     //
     return true;
 }
 
+/* Read site area values
+TO-DO: incorporate this function into the model or delete
+*/
+void MainProgram::readSiteAreaValues(){
+   }
+
+// /* Get pcrits */
+// void MainProgram::componentpcrits(){ //'gets pcrits
+//     soilcalculator.rhizocurves(z,layers,p1,p2,k,e,kmaxrh,pinc,s,x,a,n,kmin);
+//     //rootcurves(); //'gets root element curves
+//     //stemcurve(); //'gets stem element curve
+//     //pcrits;
+//     //leafcurve(); //'gets leaf element curve
+//     //pcritl;
+    
+//     //rootcurves_v(); //erases history for md solution
+//     //stemcurve(true);
+//     //leafcurve(true);
+
+//     //memset(ter, 0, sizeof(ter));
+//     //memset(tkr, 0, sizeof(tkr));
+//     //memset(tes, 0, sizeof(tes));
+//     //memset(tel, 0, sizeof(tel));
+// }
 
 /* Running the model */ 
 long MainProgram::Rungarisom(){
+    std::cout << " ---------------------------------------------" << endl;
+    std::cout << "|  CARBON GAIN VS HYDRAULIC RISK MODEL V 1.0  |" << endl;
+    std::cout << " ---------------------------------------------" << endl;
+    std::cout << endl;
+
     //Dim ddOutMod As Long // moved to module global
     memset(finalOutCells, 0, sizeof(finalOutCells)); // clear the final outputs data. Normal data sheets get cleared on each iteration, but this one only per-run
     
-    bool lrSuccess = locateRanges(); //Finds all of the input/output sections across the workbook
-    // In the C++ version, also loads parameter file and "nametable" for parameters
-    
+    bool lrSuccess = MainProgram::locateRanges(); //Finds the output sections across the workbook
     if (!lrSuccess) {
         std::cout << "Unrecoverable model failure!" << std::endl;
         std::cout << "Model stops " << std::endl;
@@ -927,7 +971,122 @@ long MainProgram::Rungarisom(){
         //return 0; // failure, unrecoverable
     }
 
+    MainProgram::cleanModelVars();
+    std::cout << " ---------------------------------------------" << std::endl;
+    std::cout << "|          READING MODEL INPUT FILES          |" << std::endl;
+    std::cout << " ---------------------------------------------" << std::endl;
+    std::cout << std::endl;
+    std::cout << "- Configuration and parameter files: " << std::endl;
+    MainProgram::readPARSheet();
+    std::cout << " ---------------------------------------------" << std::endl;
+    std::cout << "|             MODEL CONFIGURATION             |" << std::endl;
+    std::cout << " ---------------------------------------------" << std::endl;
+    MainProgram::setConfig();
+    std::cout << std::endl;
     iter_ddOutMod = 0;
     iter_Counter = 0;
     iter_code = 0;
+
+    MainProgram::InitModelVars();
+    MainProgram::InitialConditions();
+    
+    if (stage_ID == STAGE_ID_FUT_STRESS_NOACCLIM){ // override some if we're doing the odd "no acclimation stress profile"
+        std::cout << "Stage " << stage_ID << "; NoAcclim Stress Profile, overriding historical ca " << ca << " -> " << stage_CO2Fut << " and ksatp " << ksatp << " -> " << stage_KmaxFut << std::endl;
+    }
+    std::cout << " ---------------------------------------------" << endl;
+    std::cout << "|        READING ClIMATE FORCING FILES        |" << endl;
+    std::cout << " ---------------------------------------------" << endl;
+    std::cout << endl;
+    std::cout << "- Growing Season Data: " << endl;
+    MainProgram::readGSSheet();
+    MainProgram::readGrowSeasonData();
+    std::cout << endl;  
+    std::cout << "- Climate forcing data: " << endl;
+    MainProgram::readDataSheet();
+    std::cout << endl;
+    std::cout << " ---------------------------------------------" << endl;
+    std::cout << "|             INITIALIZING MODEL              |" << endl;
+    std::cout << " ---------------------------------------------" << endl;
+    std::cout << endl;
+
+    if((iter_useAreaTable)){
+        MainProgram::readSiteAreaValues();
+    }
+
+    if (iter_Counter == 0){ //we//re on the first iteration (or we//re not using iterations)
+        gs_yearIndex = 0; // multiyear
+        gs_prevDay = 0;
+        gs_inGrowSeason = false;
+    } else {
+        //things to do ONLY if we//re NOT on the first iteration
+    } // End If
+    
+    std::memset(gs_ar_input, 0, sizeof(gs_ar_input));
+    std::memset(gs_ar_Anet, 0, sizeof(gs_ar_Anet));
+    std::memset(gs_ar_E, 0, sizeof(gs_ar_E));
+    std::memset(gs_ar_PLCp, 0, sizeof(gs_ar_PLCp));
+    std::memset(gs_ar_PLCx, 0, sizeof(gs_ar_PLCx));
+    std::memset(gs_ar_kPlant, 0, sizeof(gs_ar_kPlant));
+    std::memset(gs_ar_kXylem, 0, sizeof(gs_ar_kXylem));
+    std::memset(gs_ar_ET, 0, sizeof(gs_ar_ET));
+    std::memset(gs_ar_PLC85, 0, sizeof(gs_ar_PLC85));
+    std::memset(gs_ar_PLCSum, 0, sizeof(gs_ar_PLCSum));
+    std::memset(gs_ar_PLCSum_N, 0, sizeof(gs_ar_PLCSum_N));
+
+    std::memset(gs_ar_kPlantMean, 0, sizeof(gs_ar_kPlantMean));
+    std::memset(gs_ar_kPlantMean_N, 0, sizeof(gs_ar_kPlantMean_N));
+    std::memset(gs_ar_waterInitial, 0, sizeof(gs_ar_waterInitial));
+    std::memset(gs_ar_waterFinal, 0, sizeof(gs_ar_waterFinal));
+
+    std::memset(gs_ar_waterInitial_GS, 0, sizeof(gs_ar_waterInitial_GS));
+    std::memset(gs_ar_waterFinal_GS, 0, sizeof(gs_ar_waterFinal_GS));
+    std::memset(gs_ar_waterInput_GS, 0, sizeof(gs_ar_waterInput_GS));
+
+    std::memset(gs_ar_waterInitial_OFF, 0, sizeof(gs_ar_waterInitial_OFF));
+    std::memset(gs_ar_waterFinal_OFF, 0, sizeof(gs_ar_waterFinal_OFF));
+    std::memset(gs_ar_waterInput_OFF, 0, sizeof(gs_ar_waterInput_OFF));
+
+    std::memset(gs_ar_nrFailConverge, 0, sizeof(gs_ar_nrFailConverge));
+    std::memset(gs_ar_nrFailConverge_Water, 0, sizeof(gs_ar_nrFailConverge_Water));
+    std::memset(gs_ar_nrFailThreshold, 0, sizeof(gs_ar_nrFailThreshold));
+
+    std::memset(gs_ar_cica, 0, sizeof(gs_ar_cica));
+    std::memset(gs_ar_cica_N, 0, sizeof(gs_ar_cica_N));
+
+    std::memset(gs_ar_Aci, 0, sizeof(gs_ar_Aci));
+    std::memset(gs_ar_AnetDay, 0, sizeof(gs_ar_AnetDay));
+
+    for (k = 0; k <= layers; k++){ // k = 0 To layers //assign source pressures, set layer participation
+        layerfailure[k] = "ok";
+        layer[k] = 0; //1 if out of function
+    } // Next k
+
+    failure = 0; //=1 for system failure at midday...terminates run
+    failspot = "no failure";
+    //componentpcrits(); //gets pcrits for each component
+    failspot = "no failure";
+    std::cout << std::endl;
+    std::cout << "Rhizosphere Pcrit for layer 1: " << pcritrh[1] << std::endl;
+    std::cout << std::endl;
+    std::cout << "------------------ TESTING AREA ------------------"<< std::endl; 
+    std::cout << "Rhizosphere Resistance: " << rhizor << std::endl;
+   // soilcalculator.rhizor_change(&rhizor, kmaxrh[6]);
+    std::cout << std::endl;
+    std::cout << "Rhizosphere Resistance: " << rhizor << std::endl;
+    std::cout << std::endl;
+    for (k = 1; k <= layers; k++){ // k = 1 To layers //exclude the top layer
+        //kminroot[k] = ksatr[k];
+    } // Next k
+
+    //kminstem = ksats;
+    //kminleaf = ksatl;
+    //kminplant = ksatp;
+
+    //gwflow = 0; //inflow to bottom of root zone
+    //drainage = 0; //drainage from bottom of root zone
+
+    //dd = 0;
+    long ddMod = 0;
+    long successCode = 0;
+
 }

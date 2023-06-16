@@ -42,8 +42,6 @@
 #include "04Morphology.h" // module to calculate root morphological traits
 #include "06MiscFunctions.h" // set of functions used to calculate parameter values at the beginning
 
-// Define global variables
-
 // Define classes
 class MainProgram
 {
@@ -58,7 +56,7 @@ private:
 
 public:
     // Variable declarations
-    // For reading data
+    /* For reading data */
     double dummyDouble = 0.0;
     long rowD, colD, rowLR, colLR;
     // Configuration file
@@ -73,14 +71,21 @@ public:
     double dataCells[DATAFILE_MAXROWS][DATAFILE_MAXCOLS]; // up to 2000k rows and 100 columns of input data
     double finalOutCells[MAX_SUMMARY_ROWS][MAX_SUMMARY_COLS];
     // Growing season data
-    long GSCells[101][11]; // contains the growing season start/end days
+    std::string GSCells[101][11]; // contains the growing season start/end days
     // a much simpler class for the full C++ version which just wraps access to the dataSet[][] array in the dsheet.Cells command
     // exists to preserve the code legacy of the model, which is written in VBA for Excel
     std::string GSFileName = "";
 
-    // For staging the model
+    /* For staging the model */
     long stage_ID;
     std::string stageNames[STAGE_ID_FUT_STRESS_NOACCLIM + 1];
+    double stage_OptHistBAGA = 0.0;
+    double stage_OptFutBAGA = 0.0;
+    double stage_KmaxFut = 0.0;
+    double stage_LeafResistPerFut = 0.0;
+    double stage_CO2Fut = 0.0;
+    double stage_Hist_refK = 0.0;
+    double stage_Fut_refK = 0.0;
     
     // the minimum info necessary to identify any historical run
     std::string name_region = "";
@@ -90,7 +95,7 @@ public:
     std::string name_scen = "";
     std::string name_model = "";
 
-    // Model constants
+    /* Model constants */
     const double pi = 3.14159;
     const double sbc = 0.0000000567; //'stefan boltzman constant in W m-2 K-4
     const double sha = 29.3; //'specific heat of air in J mol-1C-1
@@ -102,7 +107,7 @@ public:
     const double abspar = 0.8; //'absorptivity of par for leaves
     const double absnir = 0.2; //'absorptivity of near infrared for leaves
 
-    // Model configuration
+    /* Model configuration */
     bool hysteresis, refilling, ground, soilred, sevap, raining, bucket, reset_kmax,nonGS_water;
     bool nonGS_evaporation, GS_mode,useGSData, mode_predawns, iter_runSupplyCurve,iter_useAreaTable;
     bool iter_gwEnable,iter_ffcEnable, iter_bagaEnable, iter_yearsAsCount;
@@ -110,12 +115,12 @@ public:
     long iter_code; // used to override the normal iteration behavior if we want to walk back a half step
     long iter_Counter; //how many iterations of this data set have we run? For finding the supply curve
 
-    // Defining model variables from parameter_data.csv file
+    /* Model parameter file */
     // Site Identifiers & Parameters
     std::string region, siteID, species;
     double lat, lon, alt, slope, slope_asp;
     // Sky Parameters
-    double tau, tsncorr, emiss;
+    double tau, tsncorr, emiss, ca;
     // Soils Parameters
     std::string texture;
     int layers;
@@ -135,7 +140,7 @@ public:
     double iter_ffc, iter_ffcStart, iter_ffcEnd, iter_ffcInc;
     double iter_baga, iter_bagaStart, iter_bagaEnd, iter_bagaInc, iter_bagaRef, iter_bagaCutoff;
 
-    // Used in initial conditions
+    /* Initial conditions */
     long runmean, f, k, z, i, unknowns, t;
     double cutoff, minwind, epsx, sthresh, gmax, gmaxl, patm, pinc, sum;
     // For soil parameterization
@@ -150,7 +155,7 @@ public:
     // Morphological traits
     double beta;
 
-    // Defining model variables used or to be calculated by the model
+    /* Defining model variables used or to be calculated by the model */
     // Used for counting years
     bool isNewYear;
     long gs_yearIndex; /* this is a counter from 0 (for the first year) indicating how many years have passed
@@ -163,11 +168,18 @@ public:
     long jd, year_cur, year_start; //not to be confused with the year array index, which is year_cur - year_start
     long yearVal; // the temporary variable where we hold the year read from the sheet
     long gs_ar_years[100], gs_ar_starts[100], gs_ar_ends[100], growSeasonCount;
+    double gs_ar_Ca[100];
+    
+    // Soil variables
+    std::string failspot, layerfailure[6];
+    long failure, layer[6];
+    double pcritrh[6], erh[6][100001], krh[6][100001];
 
     // Integration variables
     long it, tnm, j, tmax;
-    double del, eps, olds;
+    double del, eps, olds, p1, p2, e, s;
 
+    /* Model outputs*/
     // Output columns
     // time-step file
     long dColYear, dColDay, dColTime, dColSolar, dColWind, dColRain, dColTAir, dColTSoil, dColD;
@@ -182,12 +194,25 @@ public:
     dColF_End_watercontent, dColF_End_waterchange, dColF_End_rain, dColF_End_gwater, dColF_End_E, dColF_End_drainage,
     dColF_End_soilEvap, dColF_End_ET, dColF_End_ANet, dColF_End_input, dColF_End_PLCplant, dColF_End_PLCxylem,
     dColF_End_runoff;
+    
     // summary file
     long dColF_GS_year, dColF_GS_input, dColF_GS_Anet, dColF_GS_E, dColF_GS_PLCp, dColF_GS_PLCx, dColF_GS_kPlant, dColF_GS_kXylem, dColF_GS_ET;
 
-    // Functions used in the model
+    // Output variables 
+    /* all of these are arrays of size 100 - but this should never matter as long as 
+    the gs_yearIndex never exceeds 99*/
+    double gs_ar_input[100], gs_ar_Anet[100], gs_ar_E[100], gs_ar_PLCp[100], gs_ar_PLCx[100], gs_ar_kPlant[100];
+    double gs_ar_kXylem[100], gs_ar_ET[100], gs_ar_PLC85[100], gs_ar_PLCSum[100], gs_ar_PLCSum_N[100];
+    double gs_ar_kPlantMean[100], gs_ar_waterInitial[100], gs_ar_waterFinal[100], gs_ar_waterInitial_GS[100];
+    double gs_ar_waterFinal_GS[100], gs_ar_waterInput_GS[100], gs_ar_waterInitial_OFF[100], gs_ar_waterFinal_OFF[100];
+    double gs_ar_waterInput_OFF[100], gs_ar_nrFailConverge_Water[100], gs_ar_nrFailConverge_WaterMax[100], gs_ar_cica[100];
+    double gs_ar_Aci[100], gs_ar_AnetDay[100];
+    long gs_ar_kPlantMean_N[100], gs_ar_nrFailConverge[100], gs_ar_nrFailThreshold[100], gs_ar_cica_N[100];
+
+    /* Functions used in the model */
     void readPARSheet();                    // read the parameter file data
-    void readGSSheet();                     // read growing season data and atm cO2 
+    void readGSSheet();                     // read growing season data and atm CO2 
+    void readGrowSeasonData();              // extract cell values from growing season data and CO2
     void readDataSheet();                   // read climate forcing data
     void setConfig();                       // sets up model configuration
     void InitialConditions();               // sets up initial conditions (substitutes ReadIn() in V 1.0.0)
@@ -196,8 +221,9 @@ public:
     bool isInGrowSeasonSimple();            // sets whether the model is running within the growing season
     short cleanModelVars();                 // clear values
     bool locateRanges();                    // might delete this function
+    void readSiteAreaValues();              // TO-DO: incorporate this function into the model or delete
+    //void componentpcrits();                 // Get critical pressures (Pcrits)
     long Rungarisom();                      // function to run the program it replaces "modelProgramMain()" (H. Todd)
-
 };
 
 #endif

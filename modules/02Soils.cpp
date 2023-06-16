@@ -1,6 +1,6 @@
 // Functions to calculate soil parameters at start
 #include "02Soils.h"
-#include "00MainProgram.h"
+//#include "00MainProgram.h"
 
 /* Soil structure */
 // Layer depths and % root ksat
@@ -131,7 +131,7 @@ std::vector <double> soils::get_vgparams(string texture) {
 
 // EQ1
 // vp = 1 / ((a(z) * x) ^ n(z) + 1) 
-double soils::get_vgp(double a[6], double n[6], double x, long z)
+double soils::get_vgp(double a[6], double n[6], double &x, long z)
 {
     return 1.0 / (pow((a[z] * x), n[z]) + 1);
 }
@@ -144,7 +144,7 @@ double soils::get_vgterm(double n[6], double vp, long z)
 }
 
 // EQ3 // does function does everything than the other 2, might keep just 1
-double soils::get_vg(double a[6], double n[6], double &x,double kmaxrh[6], long z) //'the van genuchten function for soil k
+double soils::get_vg(double a[], double n[], double &x,double kmaxrh[], long z) //'the van genuchten function for soil k
 {
     //vp = 1 / ((a(z) * x) ^ n(z) + 1)
     //vg = kmaxrh(z) * vp ^ ((n(z) - 1) / (2 * n(z))) * ((1 - vp) ^ ((n(z) - 1) / n(z)) - 1) ^ 2
@@ -155,7 +155,7 @@ double soils::get_vg(double a[6], double n[6], double &x,double kmaxrh[6], long 
 
 /* Soil water status*/
 //'gives soil Y in MPa from soil theta/thetasat=x
-double soils::get_rvg(double a[6], double n[6], double &x, long z) {
+double soils::get_rvg(double a[6], double n[6], double x, long z) {
     //rvg = (x ^ (1 / (1 - 1 / n(z))) + 1) ^ (1 / n(z)) / (x ^ (1 / (n(z) - 1)) * a(z))
     double aa = pow((pow(x, (1 / (1 - 1 / n[z]))) + 1), (1 / n[z]));
     double bb = (pow(x, (1 / (n[z] - 1))) * a[z]);
@@ -163,47 +163,80 @@ double soils::get_rvg(double a[6], double n[6], double &x, long z) {
 }
 
 // Soil water content from soil water potential in MPa=x   
-double soils::get_swc(double a[6], double n[6], double &x, long z) {
+double soils::get_swc(double a[6], double n[6], double x, long z) {
     //swc = (1 / (1 + (a(z) * x) ^ n(z))) ^ (1 - 1 / n(z))
     return pow((1 / (1 + pow((a[z] * x), n[z]))), (1 - 1 / n[z]));
 }
-    
-/* Van Genuchten Integration */
-// integrates van genuchten
-void soils::trapzdvg(double &p1, double &p2, double &s, long &t) {
-    MainProgram garisom;
-    if (t == 1) {
-        double vg_p1 = get_vg(garisom.a, garisom.n, p1,garisom.kmaxrh,garisom.z);
-        double vg_p2 = get_vg(garisom.a, garisom.n, p2,garisom.kmaxrh,garisom.z);
-        s = 0.5 * (p2 - p1) * (vg_p1 + vg_p2);
-        garisom.it = 1;
-    } else {
-        garisom.tnm = garisom.it;
-        garisom.del = (p2 - p1) / garisom.tnm;
-        garisom.x = p1 + 0.5 * garisom.del;
-        garisom.sum = 0;
+
+// dummy test function
+void soils::rhizor_change(double* rhizor,double* kmaxrh[6]){
+    *rhizor = *rhizor * 2;
+    for(int i = 0; i < 7;i++){
+        *kmaxrh[i] = *kmaxrh[i]*2;
+    }
+}
+
+// /* Van Genuchten Integration */
+// // integrates van genuchten
+// void soils::trapzdvg(double* p1, double* p2, double* s, long* t) {
+//     if (t == 1) {
+//         double vg_p1 = get_vg(a, n, p1,kmaxrh,z);
+//         double vg_p2 = get_vg(a, n, p2,kmaxrh,z);
+//         s = 0.5 * (p2 - p1) * (vg_p1 + vg_p2);
+//         it = 1;
+//     } else {
+//         tnm = it;
+//         del = (p2 - p1) / tnm;
+//         x = p1 + 0.5 * del;
+//         sum = 0;
         
-        for (garisom.j = 1; garisom.j <= garisom.it; garisom.j++) {
-            garisom.sum = garisom.sum + get_vg(garisom.a, garisom.n, garisom.x, garisom.kmaxrh,garisom.z);
-            garisom.x = garisom.x + garisom.del;
-        }
-        s = 0.5 * (s + (p2 - p1) * garisom.sum / garisom.tnm);
-        garisom.it = 2 * garisom.it;
-    }
-}
+//         for (j = 1; j <= it; j++) {
+//             sum = sum + get_vg(a, n, x, kmaxrh,z);
+//             x = x + del;
+//         }
+//         s = 0.5 * (s + (p2 - p1) * sum / tnm);
+//         it = 2 * it;
+//     }
+// }
 
-// evaluates accuracy of van genuchten integration
-void soils::qtrapvg(double &p1, double &p2, double &s) {
-    MainProgram garisom;
-    garisom.eps = 0.001; //fractional refinement threshold for integral
-    garisom.tmax = 70; //limit of calls to trapzdvg
-    garisom.olds = -1; //starting point unlikely to satisfy if statement below
+// // evaluates accuracy of van genuchten integration
+// void soils::qtrapvg(double &p1, double &p2, double &s) {
+//     MainProgram garisom;
+//     eps = 0.001; //fractional refinement threshold for integral
+//     tmax = 70; //limit of calls to trapzdvg
+//     olds = -1; //starting point unlikely to satisfy if statement below
     
-    for (garisom.t = 1; garisom.t <= garisom.tmax; garisom.t++){
-        trapzdvg(p1, p2, s, garisom.t);
-        if (std::abs(s - garisom.olds) < garisom.eps * std::abs(garisom.olds))
-        return;
-        garisom.olds = s;
-    }
-}
+//     for (t = 1; t <= tmax; t++){
+//         trapzdvg(p1, p2, s, t);
+//         if (std::abs(s - olds) < eps * std::abs(olds))
+//         return;
+//         olds = s;
+//     }
+// }
 
+// double erh[6][100001], krh[6][100001], pcritrh[6];
+// //Generate soil E(P) global curve--only need to do this once
+// void soils::rhizocurves(long &z, int &layers, double &p1, double &p2, long &k, double &e,double kmaxrh[6], double pinc, double &s, double &x, double a[6], double n[6], double kmin){
+//     for (z = 1; z <= layers; z++) { //z = 1 To layers
+//         p1 = 0;
+//         k = 1;
+//         e = 0; //flow integral
+//         ::erh[z][0] = 0; //first array position is layer number
+//         ::krh[z][0] = kmaxrh[z];
+            
+//         do {
+//             p2 = p1 + pinc;
+//             soils::qtrapvg(p1, p2, s);
+//             e = e + s;
+//             ::erh[z][k] = e;
+//             x = p2;
+//             ::krh[z][k] = soils::get_vg(a,n,x,kmaxrh,z); //instantaneous k at upper limit of integration = derivative of flow integral (fundamental theorem of calculus)
+//             p1 = p2; //reset p1 for next increment
+//             k = k + 1;
+//             if (k == 100000){
+//                 break; //Then Exit Do //avoid crashing for extreme vc//s
+//             }
+//         } while (!(::krh[z][k - 1] < kmin)); //Loop Until krh(z, k - 1) < kmin
+//         ::pcritrh[z] = p2; //end of line for rhizo element z
+//     } //endfor// z
+// } //endsub//

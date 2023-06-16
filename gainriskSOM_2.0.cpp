@@ -1,20 +1,9 @@
 /* 
-# Carbon Gain vs. Hydraulic Risk Stomatal Optimization Model V.1.0
+# Carbon Gain vs. Hydraulic Risk Stomatal Optimization Model V.2.0
 
 ## Author: German Vargas G.
 ## Contact: german.vargas@utah.edu
 ## Date: Jun-2023
-
-### Original model citations:
-##### Original VSB code
-Authors: Sperry, John S., Martin D. Venturas, William R. L. Anderegg, Maurizio Mencuccini, D. Scott Mackay, Yujie Wang, and David M. Love. 
-Title: “Predicting Stomatal Responses to the Environment from the Optimization of Photosynthetic Gain and Hydraulic Cost.” 
-Publication Plant, Cell & Environment 40, no. 6 (2017): 816–30. https://doi.org/10.1111/pce.12852.
-
-##### Original cpp code 
-Authors: Venturas, Martin D., John S. Sperry, David M. Love, Ethan H. Frehner, Michael G. Allred, Yujie Wang, and William R. L. Anderegg. 
-Title: “A Stomatal Control Model Based on Optimization of Carbon Gain versus Hydraulic Risk Predicts Aspen Sapling Responses to Drought.” 
-Publication: New Phytologist 220, no. 3 (2018): 836–50. https://doi.org/10.1111/nph.15333.
 
 ### Model structure (file extensions)
     Garisom
@@ -98,65 +87,26 @@ Publication: New Phytologist 220, no. 3 (2018): 836–50. https://doi.org/10.111
 MainProgram garisom;
 
 int main() {
-    // 1. Reading model parameters
-    /* 
-    - The following loop goes through each line of the parameter file and reads the values in each column. 
-    - TO-DO: vectorize parameters for multi-species calculations.
-    */
-    garisom.cleanModelVars();
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << "|          READING MODEL INPUT FILES          |" << endl;
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << endl;
-    std::cout << "- Configuration and parameter files: " << endl;
-    garisom.readPARSheet();
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << "|             MODEL CONFIGURATION             |" << endl;
-    std::cout << " ---------------------------------------------" << endl;
-    garisom.setConfig();
-    std::cout << endl;
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << "|        READING ClIMATE FORCING FILES        |" << endl;
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << endl;
-    std::cout << "- Growing Season Data: " << endl;
-    garisom.readGSSheet();
-    std::cout << endl;
-    std::cout << "- Climate forcing data: " << endl;
-    garisom.readDataSheet();
-    std::cout << endl;
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << "|     INITIALIZING C GAIN VS H RISK MODEL     |" << endl;
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << endl;
-    std::cout << " Testing soil texture: " << garisom.paramCells[2][12] << endl;
-    garisom.InitialConditions();
-    std::cout << endl;
-    std::cout << " Testing vg function: " << garisom.rhizor << endl;
-    std::cout << endl;
+    // seed the random number generator with something crazy
+    srand((unsigned)(time(0) * time(0)));
+    // set the cout decimal precision
+    std::cout.precision(12);
 
-    /*// seed the random number generator with something crazy
-   //srand((unsigned)(time(0) * time(0)));
-   // set the cout decimal precision
-   std::cout.precision(12);
+    garisom.stageNames[STAGE_ID_NONE] = "standard"; //stage IDs and names are related to various modes the model was designed to run in for specific projects -- that code has been removed, but a few vestiges remain
 
-   // Model initialization
-   long result = 0;
-   std::cout << "Model Startup." << std::endl;
+    // model initialization
 
+   long result = 0;   
    // to do a normal run that's only based on local folder parameter sheet settings, set the stage_ID to zero
-   mainProg.stage_ID = STAGE_ID_NONE;
-   result = mainProg.modelProgramMain(); // for returning failure error codes... not really used in this version
+   garisom.stage_ID = STAGE_ID_NONE;
+   result = garisom.Rungarisom(); // for returning failure error codes... not really used in this version
 
    // Model finalization
-	if (!result)
-   {
-      std::cout << "Model Failure! Stage " << mainProg.stage_ID << std::endl;
-      return 0;
-   }
-   else
-   {
-      std::cout << "Model Success! Stage " << mainProg.stage_ID << std::endl;
-   }*/
-   return 1;
+	if (!result) {
+        std::cout << "Model Failure! Stage " << garisom.stage_ID << std::endl;
+        return 0;
+    } else {
+        std::cout << "Model Success! Stage " << garisom.stage_ID << std::endl;
+    }
+    return 1;
 }
