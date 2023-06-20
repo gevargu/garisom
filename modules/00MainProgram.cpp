@@ -2,14 +2,13 @@
 // The functions here go in order of implementation
 
 /* Reading parameter data sheet*/
-std::istream& operator>>(std::istream& str, CSVRow& data)
-    {
+std::istream& operator>>(std::istream& str, CSVRow& data){
     data.readNextRow(str);
     return str;
     }
 
-void MainProgram::readPARSheet ()
-{   // This function reads the model configuration and the parameter datasheet
+void MainProgram::readPARSheet (){   
+    // This function reads the model configuration and the parameter datasheet
     // This is done 1 time at the beginning of the model
     // set the model control file name
     std::string mconfigFileName = "model_config.csv";
@@ -280,8 +279,7 @@ void MainProgram::setConfig(){
 }
 
 /* Reading growing season data sheet*/
-void MainProgram::readGSSheet()
-{
+void MainProgram::readGSSheet(){
     memset(GSCells, 0, sizeof(GSCells));
 
     if (stage_ID == STAGE_ID_NONE)
@@ -362,8 +360,7 @@ void MainProgram::readGrowSeasonData(){
 }
 
 /* Reading climate forcing and output data sheets*/
-void MainProgram::readDataSheet()
-{
+void MainProgram::readDataSheet(){
     // try to find a header file
     bool foundHeaderFile = false;
     std::string headerFileName = "dataheader.csv";
@@ -464,8 +461,7 @@ void MainProgram::readDataSheet()
 }
 
 /* Initialize parameter values*/
-void MainProgram::InitialConditions()
-{
+void MainProgram::InitialConditions(){
     /* 
     - The following loop will allow to extract parameters for each species/PFT in a single 
     location or new parameters.
@@ -700,7 +696,7 @@ void MainProgram::InitialConditions()
         rhizor = soilcalculator.get_rhizor(rplant, rhizotarg); // Rhizosphere resistance
         vp = soilcalculator.get_vgp(a,n,x,z); //van genuchten terms 
         vgterm = soilcalculator.get_vgterm(n, vp, z); //van genuchten terms // vgterm = vp ^ ((n[z] - 1) / (2 * n[z])) * ((1 - vp) ^ ((n[z] - 1) / n[z]) - 1) ^ 2
-        kmaxrh[1] = hydraulicscalculator.get_kmaxrh(rhizor, vgterm); //solve for kmaxrh[1]
+        kmaxrh[1] = soilcalculator.get_kmaxrh(rhizor, vgterm); //solve for kmaxrh[1]
         kinc = kmaxrh[1] * 0.1;
 
         do // loop through rhizosphere kmax 
@@ -789,7 +785,6 @@ short MainProgram::InitModelVars(){
     year_cur = 0;
     year_start = 0;
     yearVal = 0;
-
     return -1;
 }
 
@@ -802,7 +797,7 @@ short MainProgram::cleanModelVars()
 }
 
 /* Model iterator */
-short MainProgram::setIterationParams(long &iter){
+short MainProgram::setIterationParams(long& iter){
     if (iter < 1000 && iter > -1){
         //gs_yearIndex = iter;
         iter_Counter = iter;
@@ -835,95 +830,93 @@ bool MainProgram::isInGrowSeasonSimple(){
 
 /* Range locator */
 bool MainProgram::locateRanges() {
-      // an ugly hack to setup the column order
-      dColYear = 1;
-      dColDay = dColYear + 1;
-      dColTime = dColDay + 1;
-      dColSolar = dColTime + 1;
-      dColRain = dColSolar + 1;
-      dColWind = dColRain + 1;
-      dColTAir = dColWind + 1;
-      dColTSoil = dColTAir + 1;
-      dColD = dColTSoil + 1;
-      dColF_p1 = dColD + 1;
-      dColF_p2 = dColF_p1 + 1;
-      dColF_p3 = dColF_p2 + 1;
-      dColF_p4 = dColF_p3 + 1;
-      dColF_p5 = dColF_p4 + 1;
-      dColF_predawn = dColF_p5 + 1;
-      dColF_P = dColF_predawn + 1;
-      dColF_E = dColF_P + 1;
-      dColF_Gw = dColF_E + 1;
-      dColF_laVPD = dColF_Gw + 1;
-      dColF_leaftemp = dColF_laVPD + 1;
-      dColF_ANet = dColF_leaftemp + 1;
-      dColF_s1m2 = dColF_ANet + 1;
-      dColF_ci = dColF_s1m2 + 1;
-      dColF_PPFD = dColF_ci + 1;
-      dColF_S_P = dColF_PPFD + 1;
-      dColF_S_E = dColF_S_P + 1;
-      dColF_S_Gw = dColF_S_E + 1;
-      dColF_S_laVPD = dColF_S_Gw + 1;
-      dColF_S_leaftemp = dColF_S_laVPD + 1;
-      dColF_S_Anet = dColF_S_leaftemp + 1;
-      dColF_S_s1m2 = dColF_S_Anet + 1;
-      dColF_S_ci = dColF_S_s1m2 + 1;
-      dColF_S_PPFD = dColF_S_ci + 1;
-      dColF_T_E = dColF_S_PPFD + 1;
-      dColF_T_ANet = dColF_T_E + 1;
-      dColF_T_s1m2 = dColF_T_ANet + 1;
-      dColF_T_pcrit = dColF_T_s1m2 + 1;
-      dColF_T_Ecrit = dColF_T_pcrit + 1;
-      dColF_CP_Pstem = dColF_T_Ecrit + 1;
-      dColF_CP_Proot = dColF_CP_Pstem + 1;
-      dColF_CP_kstem = dColF_CP_Proot + 1;
-      dColF_CP_kleaf = dColF_CP_kstem + 1;
-      dColF_CP_kplant = dColF_CP_kleaf + 1;
-      dColF_CP_kxylem = dColF_CP_kplant + 1;
-      dColF_CP_kroot1 = dColF_CP_kxylem + 1;
-      dColF_CP_kroot2 = dColF_CP_kroot1 + 1;
-      dColF_CP_kroot3 = dColF_CP_kroot2 + 1;
-      dColF_CP_kroot4 = dColF_CP_kroot3 + 1;
-      dColF_CP_kroot5 = dColF_CP_kroot4 + 1;
-      dColF_CP_krootAll = dColF_CP_kroot5 + 1;
-      dColF_CP_Eroot1 = dColF_CP_krootAll + 1;
-      dColF_CP_Eroot2 = dColF_CP_Eroot1 + 1;
-      dColF_CP_Eroot3 = dColF_CP_Eroot2 + 1;
-      dColF_CP_Eroot4 = dColF_CP_Eroot3 + 1;
-      dColF_CP_Eroot5 = dColF_CP_Eroot4 + 1;
-      dColF_CP_Empty1 = dColF_CP_Eroot5 + 1;
-      dColF_CP_Empty2 = dColF_CP_Empty1 + 1;
-      dColF_End_watercontent = dColF_CP_Empty2 + 1;
-      dColF_End_waterchange = dColF_End_watercontent + 1;
-      dColF_End_rain = dColF_End_waterchange + 1;
-      dColF_End_gwater = dColF_End_rain + 1;
-      dColF_End_E = dColF_End_gwater + 1;
-      dColF_End_drainage = dColF_End_E + 1;
-      dColF_End_soilEvap = dColF_End_drainage + 1;
-      dColF_End_ET = dColF_End_soilEvap + 1;
-      dColF_End_ANet = dColF_End_ET + 1;
-      dColF_End_input = dColF_End_ANet + 1;
-      dColF_End_PLCplant = dColF_End_input + 1;
-      dColF_End_PLCxylem = dColF_End_PLCplant + 1;
-      dColF_End_runoff = dColF_End_PLCxylem + 1;
+    // an ugly hack to setup the column order
+    dColYear = 1;
+    dColDay = dColYear + 1;
+    dColTime = dColDay + 1;
+    dColSolar = dColTime + 1;
+    dColRain = dColSolar + 1;
+    dColWind = dColRain + 1;
+    dColTAir = dColWind + 1;
+    dColTSoil = dColTAir + 1;
+    dColD = dColTSoil + 1;
+    dColF_p1 = dColD + 1;
+    dColF_p2 = dColF_p1 + 1;
+    dColF_p3 = dColF_p2 + 1;
+    dColF_p4 = dColF_p3 + 1;
+    dColF_p5 = dColF_p4 + 1;
+    dColF_predawn = dColF_p5 + 1;
+    dColF_P = dColF_predawn + 1;
+    dColF_E = dColF_P + 1;
+    dColF_Gw = dColF_E + 1;
+    dColF_laVPD = dColF_Gw + 1;
+    dColF_leaftemp = dColF_laVPD + 1;
+    dColF_ANet = dColF_leaftemp + 1;
+    dColF_s1m2 = dColF_ANet + 1;
+    dColF_ci = dColF_s1m2 + 1;
+    dColF_PPFD = dColF_ci + 1;
+    dColF_S_P = dColF_PPFD + 1;
+    dColF_S_E = dColF_S_P + 1;
+    dColF_S_Gw = dColF_S_E + 1;
+    dColF_S_laVPD = dColF_S_Gw + 1;
+    dColF_S_leaftemp = dColF_S_laVPD + 1;
+    dColF_S_Anet = dColF_S_leaftemp + 1;
+    dColF_S_s1m2 = dColF_S_Anet + 1;
+    dColF_S_ci = dColF_S_s1m2 + 1;
+    dColF_S_PPFD = dColF_S_ci + 1;
+    dColF_T_E = dColF_S_PPFD + 1;
+    dColF_T_ANet = dColF_T_E + 1;
+    dColF_T_s1m2 = dColF_T_ANet + 1;
+    dColF_T_pcrit = dColF_T_s1m2 + 1;
+    dColF_T_Ecrit = dColF_T_pcrit + 1;
+    dColF_CP_Pstem = dColF_T_Ecrit + 1;
+    dColF_CP_Proot = dColF_CP_Pstem + 1;
+    dColF_CP_kstem = dColF_CP_Proot + 1;
+    dColF_CP_kleaf = dColF_CP_kstem + 1;
+    dColF_CP_kplant = dColF_CP_kleaf + 1;
+    dColF_CP_kxylem = dColF_CP_kplant + 1;
+    dColF_CP_kroot1 = dColF_CP_kxylem + 1;
+    dColF_CP_kroot2 = dColF_CP_kroot1 + 1;
+    dColF_CP_kroot3 = dColF_CP_kroot2 + 1;
+    dColF_CP_kroot4 = dColF_CP_kroot3 + 1;
+    dColF_CP_kroot5 = dColF_CP_kroot4 + 1;
+    dColF_CP_krootAll = dColF_CP_kroot5 + 1;
+    dColF_CP_Eroot1 = dColF_CP_krootAll + 1;
+    dColF_CP_Eroot2 = dColF_CP_Eroot1 + 1;
+    dColF_CP_Eroot3 = dColF_CP_Eroot2 + 1;
+    dColF_CP_Eroot4 = dColF_CP_Eroot3 + 1;
+    dColF_CP_Eroot5 = dColF_CP_Eroot4 + 1;
+    dColF_CP_Empty1 = dColF_CP_Eroot5 + 1;
+    dColF_CP_Empty2 = dColF_CP_Empty1 + 1;
+    dColF_End_watercontent = dColF_CP_Empty2 + 1;
+    dColF_End_waterchange = dColF_End_watercontent + 1;
+    dColF_End_rain = dColF_End_waterchange + 1;
+    dColF_End_gwater = dColF_End_rain + 1;
+    dColF_End_E = dColF_End_gwater + 1;
+    dColF_End_drainage = dColF_End_E + 1;
+    dColF_End_soilEvap = dColF_End_drainage + 1;
+    dColF_End_ET = dColF_End_soilEvap + 1;
+    dColF_End_ANet = dColF_End_ET + 1;
+    dColF_End_input = dColF_End_ANet + 1;
+    dColF_End_PLCplant = dColF_End_input + 1;
+    dColF_End_PLCxylem = dColF_End_PLCplant + 1;
+    dColF_End_runoff = dColF_End_PLCxylem + 1;
 
-      dColF_GS_year = 1;//dColF_End_runoff + 1;
-      dColF_GS_input = dColF_GS_year + 1;
-      dColF_GS_Anet = dColF_GS_input + 1;
-      dColF_GS_E = dColF_GS_Anet + 1;
-      dColF_GS_PLCp = dColF_GS_E + 1;
-      dColF_GS_PLCx = dColF_GS_PLCp + 1;
-      dColF_GS_kPlant = dColF_GS_PLCx + 1;
-      dColF_GS_kXylem = dColF_GS_kPlant + 1;
-      dColF_GS_ET = dColF_GS_kXylem + 1;
+    dColF_GS_year = 1;//dColF_End_runoff + 1;
+    dColF_GS_input = dColF_GS_year + 1;
+    dColF_GS_Anet = dColF_GS_input + 1;
+    dColF_GS_E = dColF_GS_Anet + 1;
+    dColF_GS_PLCp = dColF_GS_E + 1;
+    dColF_GS_PLCx = dColF_GS_PLCp + 1;
+    dColF_GS_kPlant = dColF_GS_PLCx + 1;
+    dColF_GS_kXylem = dColF_GS_kPlant + 1;
+    dColF_GS_ET = dColF_GS_kXylem + 1;
 
-      // TODO HACK get the region, site, spec names now -- these aren't in the current nameTable files so we'll do it manually
-      // fix this to use the nameTable when we have time to re-run all the acclimations... or write a script to update all the nametables
-      // note: this is specific to the BA/GA optimization
+    // TODO HACK get the region, site, spec names now -- these aren't in the current nameTable files so we'll do it manually
+    // fix this to use the nameTable when we have time to re-run all the acclimations... or write a script to update all the nametables
+    // note: this is specific to the BA/GA optimization
 
-      //std::cout << "Read site and scenario names (region | site | species | scenario | model): " << name_region << " | " << name_site << " | " << name_species << " | " << name_scen << " | " << name_model << std::endl;
-
-    //
+    //std::cout << "Read site and scenario names (region | site | species | scenario | model): " << name_region << " | " << name_site << " | " << name_species << " | " << name_scen << " | " << name_model << std::endl;
     return true;
 }
 
@@ -934,8 +927,8 @@ void MainProgram::readSiteAreaValues(){
    }
 
 // /* Get pcrits */
-// void MainProgram::componentpcrits(){ //'gets pcrits
-//     soilcalculator.rhizocurves(z,layers,p1,p2,k,e,kmaxrh,pinc,s,x,a,n,kmin);
+void MainProgram::componentpcrits(){ //'gets pcrits
+     soilcalculator.rhizocurves(z, layers,p1,p2,k,e,erh,krh,pinc,kmin,olds,t,a,n,kmaxrh,s,it,tnm,del,x,sum,pcritrh);
 //     //rootcurves(); //'gets root element curves
 //     //stemcurve(); //'gets stem element curve
 //     //pcrits;
@@ -950,7 +943,7 @@ void MainProgram::readSiteAreaValues(){
 //     //memset(tkr, 0, sizeof(tkr));
 //     //memset(tes, 0, sizeof(tes));
 //     //memset(tel, 0, sizeof(tel));
-// }
+}
 
 /* Running the model */ 
 long MainProgram::Rungarisom(){
@@ -1060,20 +1053,22 @@ long MainProgram::Rungarisom(){
         layerfailure[k] = "ok";
         layer[k] = 0; //1 if out of function
     } // Next k
-
+    
     failure = 0; //=1 for system failure at midday...terminates run
     failspot = "no failure";
-    //componentpcrits(); //gets pcrits for each component
+    componentpcrits(); //gets pcrits for each component
     failspot = "no failure";
     std::cout << std::endl;
-    std::cout << "Rhizosphere Pcrit for layer 1: " << pcritrh[1] << std::endl;
-    std::cout << std::endl;
+    
     std::cout << "------------------ TESTING AREA ------------------"<< std::endl; 
-    std::cout << "Rhizosphere Resistance: " << rhizor << std::endl;
-   // soilcalculator.rhizor_change(&rhizor, kmaxrh[6]);
+    std::cout << " Rhizosphere Resistance: " << rhizor << std::endl;
+    std::cout << std::endl;
+    std::cout << "Rhizosphere Conductance: " << kmaxrh[1] << std::endl;
+    
     std::cout << std::endl;
     std::cout << "Rhizosphere Resistance: " << rhizor << std::endl;
     std::cout << std::endl;
+    std::cout << "Rhizosphere Conductance: " << kmaxrh[1] << std::endl;
     for (k = 1; k <= layers; k++){ // k = 1 To layers //exclude the top layer
         //kminroot[k] = ksatr[k];
     } // Next k

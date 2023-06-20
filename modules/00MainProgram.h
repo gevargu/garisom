@@ -45,7 +45,8 @@
 // Define classes
 class MainProgram
 {
-private:
+public:
+    // Define classess for each module
     IOHandler dSheet;
     CSVRow dataHeaderRow;
     CSVRow summaryHeaderRow;
@@ -54,7 +55,6 @@ private:
     morphology morphologycalculator;
     MiscFunctions misc_functions;
 
-public:
     // Variable declarations
     /* For reading data */
     double dummyDouble = 0.0;
@@ -180,8 +180,7 @@ public:
     double del, eps, olds, p1, p2, e, s;
 
     /* Model outputs*/
-    // Output columns
-    // time-step file
+    // time-step file columns
     long dColYear, dColDay, dColTime, dColSolar, dColWind, dColRain, dColTAir, dColTSoil, dColD;
     //Data column positions - NOTE THAT THEY ARE OFFSET FROM colD, the starting data column (to avoid wasting io array space)
     long dColF_p1, dColF_p2, dColF_p3, dColF_p4, dColF_p5, dColF_predawn, dColF_P, dColF_E, dColF_Gw, dColF_laVPD, dColF_leaftemp, dColF_ANet,
@@ -195,7 +194,7 @@ public:
     dColF_End_soilEvap, dColF_End_ET, dColF_End_ANet, dColF_End_input, dColF_End_PLCplant, dColF_End_PLCxylem,
     dColF_End_runoff;
     
-    // summary file
+    // summary file columns
     long dColF_GS_year, dColF_GS_input, dColF_GS_Anet, dColF_GS_E, dColF_GS_PLCp, dColF_GS_PLCx, dColF_GS_kPlant, dColF_GS_kXylem, dColF_GS_ET;
 
     // Output variables 
@@ -222,7 +221,7 @@ public:
     short cleanModelVars();                 // clear values
     bool locateRanges();                    // might delete this function
     void readSiteAreaValues();              // TO-DO: incorporate this function into the model or delete
-    //void componentpcrits();                 // Get critical pressures (Pcrits)
+    void componentpcrits();                 // Get critical pressures (Pcrits)
     long Rungarisom();                      // function to run the program it replaces "modelProgramMain()" (H. Todd)
 };
 

@@ -1,9 +1,8 @@
 // Functions to extract weibull parameters and fit weibull function
 #include "03Hydraulics.h"
-#include "00MainProgram.h"
 
 // Weibull parameter c
-double hydraulics::get_cweibull(double p12, double p50) {
+double hydraulics::get_cweibull(const double& p12, const double& p50) {
    // c = (log(log(0.88)/log(0.50)))/(log(p12)-log(p50))
    double px1;
    double px2;
@@ -13,7 +12,7 @@ double hydraulics::get_cweibull(double p12, double p50) {
 }
 
 // Weibull parameter b
-double hydraulics::get_bweibull(double p12, double c) {
+double hydraulics::get_bweibull( const double& p12, const double& c) {
    // b = p12/(-log(0.88))^(1/c)
    double px1;
    px1 = p12*-1; // absolute value of p12
@@ -21,47 +20,46 @@ double hydraulics::get_bweibull(double p12, double c) {
 }
 
 // Weibull function for stem and leaves
-double hydraulics::get_weibullfit(double &x, double b, double c, double ksat) {
+double hydraulics::get_weibullfit(const double& x,const double& b, const double& c, const double& ksat) {
    //wb = ksat * Exp(-((x / b) ^ c))
    return ksat * exp(-(pow((x / b), c)));
 }
 
 // ROOT block
 // % resistance in roots
-double hydraulics::get_rootpercent(double leafpercent){
+double hydraulics::get_rootpercent(const double& leafpercent){
    return 2.0 / 3.0 * (100.0 - leafpercent);
 }
 
 // kmax of root system; assumes zero % rhizosphere resistance in WET soil
-double hydraulics::get_rootkmax(double rootpercent, double rsatp) {
+double hydraulics::get_rootkmax(const double& rootpercent,const double& rsatp) {
    return 1.0 / ((rootpercent / 100.0) * rsatp);
 }
 // Weibull function for root elements
-double hydraulics::get_weibullfitroot(double &x, double b, double c, double ksatr[6], int z){
+double hydraulics::get_weibullfitroot(const double& x, const double& b, const double& c, double* ksatr, const int& z){
    //wb = ksat * Exp(-((x / b) ^ c))
    return ksatr[z] * exp(-(pow((x / b), c)));
 }
 
 //integrates root element z weibull
 void hydraulics::trapzdwbr(double &p1, double &p2, double &s, long &t) {
-   MainProgram garisom;
    if (t == 1){
-      double vg_p1 = get_weibullfitroot(p1, garisom.root_b, garisom.root_c, garisom.ksatr, garisom.z);
-      double vg_p2 = get_weibullfitroot(p2, garisom.root_b, garisom.root_c, garisom.ksatr, garisom.z);
+      double vg_p1 = get_weibullfitroot(p1, root_b, root_c, ksatr, z);
+      double vg_p2 = get_weibullfitroot(p2, root_b, root_c, ksatr, z);
       s = 0.5 * (p2 - p1) * (vg_p1 + vg_p2);
-      garisom.it = 1;
+      it = 1;
    } else {
-      garisom.tnm = garisom.it;
-      garisom.del = (p2 - p1) / garisom.tnm;
-      garisom.x = p1 + 0.5 * garisom.del;
-      garisom.sum = 0;
+      tnm = it;
+      del = (p2 - p1) / tnm;
+      x = p1 + 0.5 * del;
+      sum = 0;
       
-      for (garisom.j = 1; garisom.j <= garisom.it; garisom.j++) {
-         garisom.sum = garisom.sum + get_weibullfitroot(garisom.x, garisom.root_b, garisom.root_c, garisom.ksatr, garisom.z);
-         garisom.x = garisom.x + garisom.del;
+      for (j = 1; j <= it; j++) {
+         sum = sum + get_weibullfitroot(x, root_b, root_c, ksatr, z);
+         x = x + del;
       }
-      s = 0.5 * (s + (p2 - p1) * garisom.sum / garisom.tnm);
-      garisom.it = 2 * garisom.it;
+      s = 0.5 * (s + (p2 - p1) * sum / tnm);
+      it = 2 * it;
    }
    //[HNT]
    //testcounterIntRoot = testcounterIntRoot + 1
@@ -69,56 +67,120 @@ void hydraulics::trapzdwbr(double &p1, double &p2, double &s, long &t) {
 }
 
 void hydraulics::qtrapwbr(double &p1, double &p2, double &s){ //'evaluates accuracy of root element z integration
-   MainProgram garisom;
-   garisom.olds = -1; //'starting point unlikely to satisfy if statement below
    
-   for (garisom.t = 1; garisom.t <= garisom.f; garisom.t++) {
-      trapzdwbr(p1, p2, s, garisom.t);
-      if (std::abs(s - garisom.olds) <= garisom.epsx * std::abs(garisom.olds))
+   olds = -1; //'starting point unlikely to satisfy if statement below
+   
+   for (t = 1; t <= f; t++) {
+      trapzdwbr(p1, p2, s, t);
+      if (std::abs(s - olds) <= epsx * std::abs(olds))
          return;
-      garisom.olds = s;
+      olds = s;
    }
 }
 
-// Max resistance in the rhizosphere
-double hydraulics::get_kmaxrh(double rhizor, double vgterm){
-   return (1.0 / rhizor) / vgterm;
-}
+   void rootcurves() //generates fresh global E(P) curve for the element(erases history)
+   {
+      //clear arrays from earlier calls
+      memset(er, 0, sizeof(er));//Erase er
+      memset(kr, 0, sizeof(kr));//Erase kr
+                                //do root elements
+      for (z = 1; z <= layers; z++)//z = 1 To layers
+      {
+         kr[z][0] = ksatr[z]; //kr is instantaneous K from weibull function
+                              //kminr(z) = ksatr(z)
+         p1 = 0;
+         k = 1;
+         e = 0; //value of integral
+         er[z][0] = 0; //first array position is layer number
+         do
+         {
+            p2 = p1 + pinc;
+            qtrapwbr(p1, p2, s);
+            e = e + s;
+            er[z][k] = e;
+            x = p2;
+            kr[z][k] = wbr(x); //weibull k at upper limit of integration = derivative of flow integral
+            p1 = p2; //reset p1 for next increment
+            k = k + 1;
+            if (k == 100000)
+               break;
+            //If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
+         } while (!(kr[z][k - 1] < kmin));
+         //Loop Until kr(z, k - 1) < kmin
+         pcritr[z] = p2; //end of line for element z
+      } //endfor// z
+   } //endsub//
+
+   void rootcurves_v() //generates fresh global E(P) curve for the element(erases history)
+   {
+      //clear arrays from earlier calls
+      memset(er_v, 0, sizeof(er_v));//Erase er_v
+      memset(kr_v, 0, sizeof(kr_v));//Erase kr_v
+                                //do root elements
+      for (z = 1; z <= layers; z++)//z = 1 To layers
+      {
+         kr_v[z][0] = ksatr[z]; //kr_v is instantaneous K from weibull function
+                              //kminr(z) = ksatr(z)
+         p1 = 0;
+         k = 1;
+         e = 0; //value of integral
+         er_v[z][0] = 0; //first array position is layer number
+         do
+         {
+            p2 = p1 + pinc;
+            qtrapwbr(p1, p2, s);
+            e = e + s;
+            er_v[z][k] = e;
+            x = p2;
+            kr_v[z][k] = wbr(x); //weibull k at upper limit of integration = derivative of flow integral
+            p1 = p2; //reset p1 for next increment
+            k = k + 1;
+            if (k == 100000)
+               break;
+            //If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
+         } while (!(kr_v[z][k - 1] < kmin));
+         //Loop Until kr_v(z, k - 1) < kmin
+         pcritr[z] = p2; //end of line for element z
+      } //endfor// z
+   } //endsub//
+
+
+
 
 // STEM block
 // integrates stem element z weibull
 void hydraulics::trapzdwbs(double &p1, double &p2, double &s, long &t){ //integrates root element z weibull
-   MainProgram garisom;
+   
    if (t == 1) {
-      double vg_p1 = get_weibullfit(p1,garisom.stem_b,garisom.stem_c,garisom.ksats);
-      double vg_p2 = get_weibullfit(p2,garisom.stem_b,garisom.stem_c,garisom.ksats);
+      double vg_p1 = get_weibullfit(p1,stem_b,stem_c,ksats);
+      double vg_p2 = get_weibullfit(p2,stem_b,stem_c,ksats);
       s = 0.5 * (p2 - p1) * (vg_p1 + vg_p2);
-      garisom.it = 1;
+      it = 1;
    } else {
-      garisom.tnm = garisom.it;
-      garisom.del = (p2 - p1) / garisom.tnm;
-      garisom.x = p1 + 0.5 * garisom.del;
-      garisom.sum = 0;
-      for (garisom.j = 1; garisom.j <= garisom.it; garisom.j++){
-         garisom.sum = garisom.sum + get_weibullfit(garisom.x,garisom.stem_b,garisom.stem_c,garisom.ksats);
-         garisom.x = garisom.x + garisom.del;
+      tnm = it;
+      del = (p2 - p1) / tnm;
+      x = p1 + 0.5 * del;
+      sum = 0;
+      for (j = 1; j <= it; j++){
+         sum = sum + get_weibullfit(x,stem_b,stem_c,ksats);
+         x = x + del;
       }
-      s = 0.5 * (s + (p2 - p1) * garisom.sum / garisom.tnm);
-      garisom.it = 2 * garisom.it;
+      s = 0.5 * (s + (p2 - p1) * sum / tnm);
+      it = 2 * it;
    }
 }
 
 void hydraulics::qtrapwbs(double &p1, double &p2, double &s){ //evaluates accuracy of root element z integration
-   MainProgram garisom;
-   garisom.olds = -1; //starting point unlikely to satisfy if statement below
    
-   for (garisom.t = 1; garisom.t <= garisom.f; garisom.t++){
+   olds = -1; //starting point unlikely to satisfy if statement below
+   
+   for (t = 1; t <= f; t++){
       
-      trapzdwbs(p1, p2, s, garisom.t);
+      trapzdwbs(p1, p2, s, t);
       
-      if (std::abs(s - garisom.olds) <= garisom.epsx * std::abs(garisom.olds))
+      if (std::abs(s - olds) <= epsx * std::abs(olds))
          return;
-      garisom.olds = s;
+      olds = s;
    }
 }
 

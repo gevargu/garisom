@@ -17,12 +17,12 @@ using namespace std;
 class hydraulics
 {
 public:
-    double get_cweibull(double p12, double p50);
-    double get_bweibull(double p12, double c);
-    double get_weibullfit(double &x, double b, double c, double ksat);
-    double get_rootpercent(double leafpercent);
-    double get_rootkmax(double rootpercent, double rsatp);
-    double get_weibullfitroot(double &x, double b, double c, double ksatr[6], int z);
+    double get_cweibull(const double& p12, const double& p50);
+    double get_bweibull(const double& p12, const double& c);
+    double get_weibullfit(const double& x,const double& b, const double& c, const double& ksat);
+    double get_rootpercent(const double& leafpercent);
+    double get_rootkmax(const double& rootpercent,const double& rsatp);
+    double get_weibullfitroot(const double& x, const double& b, const double& c, double* ksatr, const int& z);
     void trapzdwbr(double &p1, double &p2, double &s, long &t);
     void qtrapwbr(double &p1, double &p2, double &s);
     double get_kmaxrh(double rhizor, double vgterm);
