@@ -172,7 +172,7 @@ In this mode, plant hydraulics will reset between seasons and plant transpiratio
 
 ## References:
 
-Describing the version 0.1 of the C++ code:
+Describing the version 1.0 of the C++ code:
 - Venturas MD, JS Sperry, DM Love, EH Frehner, MG Allred, Y Wang, and WRL Anderegg. (2017). A Stomatal Control Model Based on Optimization of Carbon Gain versus Hydraulic Risk Predicts Aspen Sapling Responses to Drought. New Phytologist 220: 836–50.
 
 Describing the gain/risk algorithm used in the model:
