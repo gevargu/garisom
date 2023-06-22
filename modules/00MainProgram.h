@@ -46,6 +46,7 @@
 class MainProgram
 {
 public:
+    
     // Define classess for each module
     IOHandler dSheet;
     CSVRow dataHeaderRow;
@@ -55,6 +56,7 @@ public:
     morphology morphologycalculator;
     MiscFunctions misc_functions;
 
+    
     // Variable declarations
     /* For reading data */
     double dummyDouble = 0.0;
@@ -170,10 +172,15 @@ public:
     long gs_ar_years[100], gs_ar_starts[100], gs_ar_ends[100], growSeasonCount;
     double gs_ar_Ca[100];
     
-    // Soil variables
+    // Variables used in Pcrit calculations
     std::string failspot, layerfailure[6];
     long failure, layer[6];
-    double pcritrh[6], erh[6][100001], krh[6][100001];
+    double pcritrh[6], erh[6][100001], krh[6][100001];// rhizosphere
+    double pcritr[6], kr[6][100001], er[6][100001],er_v[6][100001], kr_v[6][100001];// roots
+    // stems
+    double pcrits, es[100001], es_v[100001];
+    // leaves
+    double pcritl, el_v[100001];
 
     // Integration variables
     long it, tnm, j, tmax;

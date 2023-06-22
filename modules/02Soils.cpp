@@ -212,7 +212,7 @@ void soils::qtrapvg(double& olds, long& t,double* a, double* n, double* kmaxrh,c
 }
 
 //Generate soil E(P) global curve--only need to do this once
-void soils::rhizocurves(long& z, int& layers, double& p1, double& p2,long& k, double& e, double erh[6][100001], double krh[6][100001], double& pinc, double& kmin, double& olds, long& t,double* a, double* n, double* kmaxrh, double& s, long& it, long& tnm, double& del, double& x, double& sum, double* pcritrh){
+void soils::get_rhizoPcrit(long& z, int& layers, double& p1, double& p2,long& k, double& e, double erh[6][100001], double krh[6][100001], double& pinc, double& kmin, double& olds, long& t,double* a, double* n, double* kmaxrh, double& s, long& it, long& tnm, double& del, double& x, double& sum, double* pcritrh){
     for (z = 1; z <= layers; z++) { //z = 1 To layers
         p1 = 0;
         k = 1;

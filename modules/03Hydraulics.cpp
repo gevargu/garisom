@@ -35,6 +35,7 @@ double hydraulics::get_rootpercent(const double& leafpercent){
 double hydraulics::get_rootkmax(const double& rootpercent,const double& rsatp) {
    return 1.0 / ((rootpercent / 100.0) * rsatp);
 }
+
 // Weibull function for root elements
 double hydraulics::get_weibullfitroot(const double& x, const double& b, const double& c, double* ksatr, const int& z){
    //wb = ksat * Exp(-((x / b) ^ c))
@@ -42,10 +43,10 @@ double hydraulics::get_weibullfitroot(const double& x, const double& b, const do
 }
 
 //integrates root element z weibull
-void hydraulics::trapzdwbr(double &p1, double &p2, double &s, long &t) {
+void hydraulics::trapzdwbr(const long& t, double &p1, double &p2, const double& b, const double& c,double* ksatr, const int& z, double& s, long& it, long& tnm, double& del, double& x, double& sum) {
    if (t == 1){
-      double vg_p1 = get_weibullfitroot(p1, root_b, root_c, ksatr, z);
-      double vg_p2 = get_weibullfitroot(p2, root_b, root_c, ksatr, z);
+      double vg_p1 = get_weibullfitroot(p1, b, c, ksatr, z);
+      double vg_p2 = get_weibullfitroot(p2, b, c, ksatr, z);
       s = 0.5 * (p2 - p1) * (vg_p1 + vg_p2);
       it = 1;
    } else {
@@ -54,8 +55,8 @@ void hydraulics::trapzdwbr(double &p1, double &p2, double &s, long &t) {
       x = p1 + 0.5 * del;
       sum = 0;
       
-      for (j = 1; j <= it; j++) {
-         sum = sum + get_weibullfitroot(x, root_b, root_c, ksatr, z);
+      for (long j = 1; j <= it; j++) {
+         sum = sum + get_weibullfitroot(x, b, c, ksatr, z);
          x = x + del;
       }
       s = 0.5 * (s + (p2 - p1) * sum / tnm);
@@ -66,124 +67,85 @@ void hydraulics::trapzdwbr(double &p1, double &p2, double &s, long &t) {
    //[\HNT]
 }
 
-void hydraulics::qtrapwbr(double &p1, double &p2, double &s){ //'evaluates accuracy of root element z integration
+void hydraulics::qtrapwbr(double& olds, long& t, double& p1, double& p2, const double& b, const double& c,double* ksatr, const int& z, double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx){ //'evaluates accuracy of root element z integration
    
    olds = -1; //'starting point unlikely to satisfy if statement below
    
    for (t = 1; t <= f; t++) {
-      trapzdwbr(p1, p2, s, t);
-      if (std::abs(s - olds) <= epsx * std::abs(olds))
+      trapzdwbr(t, p1, p2, b, c, ksatr, z, s, it, tnm, del, x, sum);
+      if (std::abs(s - olds) <= epsx * std::abs(olds)){
          return;
+      }
       olds = s;
    }
 }
 
-   void rootcurves() //generates fresh global E(P) curve for the element(erases history)
-   {
-      //clear arrays from earlier calls
-      memset(er, 0, sizeof(er));//Erase er
-      memset(kr, 0, sizeof(kr));//Erase kr
-                                //do root elements
-      for (z = 1; z <= layers; z++)//z = 1 To layers
-      {
-         kr[z][0] = ksatr[z]; //kr is instantaneous K from weibull function
-                              //kminr(z) = ksatr(z)
-         p1 = 0;
-         k = 1;
-         e = 0; //value of integral
-         er[z][0] = 0; //first array position is layer number
-         do
-         {
-            p2 = p1 + pinc;
-            qtrapwbr(p1, p2, s);
-            e = e + s;
-            er[z][k] = e;
-            x = p2;
-            kr[z][k] = wbr(x); //weibull k at upper limit of integration = derivative of flow integral
-            p1 = p2; //reset p1 for next increment
-            k = k + 1;
-            if (k == 100000)
-               break;
-            //If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
-         } while (!(kr[z][k - 1] < kmin));
-         //Loop Until kr(z, k - 1) < kmin
-         pcritr[z] = p2; //end of line for element z
-      } //endfor// z
-   } //endsub//
+// root E(P) curves
+void hydraulics::get_rootPcrit(double er[][100001],double kr[][100001],long& z, const int& layers,double* ksatr, double& p1, double& p2, const double& pinc,long& k,double& e,double& olds, long& t, const double& b, const double& c, double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx, const double& kmin,double* pcritr) { //generates fresh global E(P) curve for the element(erases history)
+   //clear arrays from earlier calls
+   memset(er, 0, sizeof(er));//Erase er
+   memset(kr, 0, sizeof(kr));//Erase kr
+   
+   //do root elements
+   for (z = 1; z <= layers; z++) {//z = 1 To layers
+      kr[z][0] = ksatr[z]; //kr is instantaneous K from weibull function
+      //kminr(z) = ksatr(z)
+      p1 = 0;
+      k = 1;
+      e = 0; //value of integral
+      er[z][0] = 0; //first array position is layer number
+      
+      do {
+         p2 = p1 + pinc;
+         qtrapwbr(olds, t, p1, p2, b, c, ksatr, z, s, it, tnm, del, x, sum, f, epsx);
+         e = e + s;
+         er[z][k] = e;
+         x = p2;
+         kr[z][k] = get_weibullfitroot(x,b,c,ksatr,z); //weibull k at upper limit of integration = derivative of flow integral
+         p1 = p2; //reset p1 for next increment
+         k = k + 1;
+         if (k == 100000){
+            break;//If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
+         }
+      } while (!(kr[z][k - 1] < kmin)); //Loop Until kr(z, k - 1) < kmin
+      
+      pcritr[z] = p2; //end of line for element z
+   } //endfor// z
+} //endsub//
 
-   void rootcurves_v() //generates fresh global E(P) curve for the element(erases history)
-   {
-      //clear arrays from earlier calls
-      memset(er_v, 0, sizeof(er_v));//Erase er_v
-      memset(kr_v, 0, sizeof(kr_v));//Erase kr_v
-                                //do root elements
-      for (z = 1; z <= layers; z++)//z = 1 To layers
-      {
-         kr_v[z][0] = ksatr[z]; //kr_v is instantaneous K from weibull function
-                              //kminr(z) = ksatr(z)
-         p1 = 0;
-         k = 1;
-         e = 0; //value of integral
-         er_v[z][0] = 0; //first array position is layer number
-         do
-         {
-            p2 = p1 + pinc;
-            qtrapwbr(p1, p2, s);
-            e = e + s;
-            er_v[z][k] = e;
-            x = p2;
-            kr_v[z][k] = wbr(x); //weibull k at upper limit of integration = derivative of flow integral
-            p1 = p2; //reset p1 for next increment
-            k = k + 1;
-            if (k == 100000)
-               break;
-            //If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
-         } while (!(kr_v[z][k - 1] < kmin));
-         //Loop Until kr_v(z, k - 1) < kmin
-         pcritr[z] = p2; //end of line for element z
-      } //endfor// z
-   } //endsub//
-
-
-
+void hydraulics::get_rootPcrit_v(double er_v[][100001],double kr_v[][100001],long& z, const int& layers,double* ksatr, double& p1, double& p2, const double& pinc,long& k,double& e,double& olds, long& t, const double& b, const double& c, double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx, const double& kmin,double* pcritr) { //generates fresh global E(P) curve for the element(erases history)
+   //clear arrays from earlier calls
+   memset(er_v, 0, sizeof(er_v));//Erase er_v
+   memset(kr_v, 0, sizeof(kr_v));//Erase kr_v
+   
+   //do root elements
+   for (z = 1; z <= layers; z++) {//z = 1 To layers 
+      kr_v[z][0] = ksatr[z]; //kr_v is instantaneous K from weibull function
+      //kminr(z) = ksatr(z)
+      p1 = 0;
+      k = 1;
+      e = 0; //value of integral
+      er_v[z][0] = 0; //first array position is layer number
+      
+      do {
+         p2 = p1 + pinc;
+         qtrapwbr(olds, t, p1, p2, b, c, ksatr, z, s, it, tnm, del, x, sum, f, epsx);
+         e = e + s;
+         er_v[z][k] = e;
+         x = p2;
+         kr_v[z][k] = get_weibullfitroot(x,b,c,ksatr,z); //weibull k at upper limit of integration = derivative of flow integral
+         p1 = p2; //reset p1 for next increment
+         k = k + 1;
+         if (k == 100000){
+            break; //If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
+         }
+      } while (!(kr_v[z][k - 1] < kmin)); //Loop Until kr_v(z, k - 1) < kmin
+      
+      pcritr[z] = p2; //end of line for element z
+   } //endfor// z
+} //endsub//
 
 // STEM block
-// integrates stem element z weibull
-void hydraulics::trapzdwbs(double &p1, double &p2, double &s, long &t){ //integrates root element z weibull
-   
-   if (t == 1) {
-      double vg_p1 = get_weibullfit(p1,stem_b,stem_c,ksats);
-      double vg_p2 = get_weibullfit(p2,stem_b,stem_c,ksats);
-      s = 0.5 * (p2 - p1) * (vg_p1 + vg_p2);
-      it = 1;
-   } else {
-      tnm = it;
-      del = (p2 - p1) / tnm;
-      x = p1 + 0.5 * del;
-      sum = 0;
-      for (j = 1; j <= it; j++){
-         sum = sum + get_weibullfit(x,stem_b,stem_c,ksats);
-         x = x + del;
-      }
-      s = 0.5 * (s + (p2 - p1) * sum / tnm);
-      it = 2 * it;
-   }
-}
-
-void hydraulics::qtrapwbs(double &p1, double &p2, double &s){ //evaluates accuracy of root element z integration
-   
-   olds = -1; //starting point unlikely to satisfy if statement below
-   
-   for (t = 1; t <= f; t++){
-      
-      trapzdwbs(p1, p2, s, t);
-      
-      if (std::abs(s - olds) <= epsx * std::abs(olds))
-         return;
-      olds = s;
-   }
-}
-
 // % resistance in stems
 double hydraulics::get_stempercent(double leafpercent){
    return 1.0 / 3.0 * (100.0 - leafpercent);
@@ -201,6 +163,75 @@ double hydraulics::get_stemkmax(double stempercent, double rsatp){
    return 1.0 / ((stempercent / 100.0) * rsatp);
 }
 
+// integrates stem element z weibull
+void hydraulics::trapzdwbs(const long &t, double &p1, double &p2, const double& b, const double& c, const double& ksats,double &s, long& it, long& tnm, double& del, double& x, double& sum){ //integrates stem element weibull
+   
+   if (t == 1) {
+      double vg_p1 = get_weibullfit(p1,b,c,ksats);
+      double vg_p2 = get_weibullfit(p2,b,c,ksats);
+      s = 0.5 * (p2 - p1) * (vg_p1 + vg_p2);
+      it = 1;
+   } else {
+      tnm = it;
+      del = (p2 - p1) / tnm;
+      x = p1 + 0.5 * del;
+      sum = 0;
+      for (long j = 1; j <= it; j++){
+         sum = sum + get_weibullfit(x,b,c,ksats);
+         x = x + del;
+      }
+      s = 0.5 * (s + (p2 - p1) * sum / tnm);
+      it = 2 * it;
+   }
+}
+
+void hydraulics::qtrapwbs(double& olds, long &t, const long& f, double &p1, double &p2, const double& b, const double& c, const double& ksats,double &s, long& it, long& tnm, double& del, double& x, double& sum, double& epsx){ //evaluates accuracy of root element z integration
+   
+   olds = -1; //starting point unlikely to satisfy if statement below
+   
+   for (t = 1; t <= f; t++){
+      
+      trapzdwbs(t, p1, p2, b, c, ksats, s, it, tnm, del, x, sum);
+      
+      if (std::abs(s - olds) <= epsx * std::abs(olds))
+         return;
+      olds = s;
+   }
+}
+
+// stem E(P) curve
+void hydraulics::get_stemPcrit(double* es,bool vCurve = false, double* es_v, double &p1, double &p2) {
+   
+   double* es_ptr = es;
+   
+   if (vCurve) {
+      memset(es_v, 0, sizeof(es_v));
+      es_ptr = es_v;
+   } else {
+      memset(es, 0, sizeof(es));
+   } //memset(es, 0, sizeof(es));//Erase es //eliminate values from previous calls
+   
+   p1 = 0;
+   k = 1;
+   e = 0; //value of integral
+   es_ptr[0] = 0;
+   
+   do {
+      p2 = p1 + pinc;
+      qtrapwbs(olds, t, f, p1, p2, b, c, ksats, s, it, tnm, del, x, sum, epsx);
+      e = e + s;
+      es_ptr[k] = e;
+      x = p2;
+      ksh = get_weibullfit(x,b,c,ksats); //weibull k
+      p1 = p2; //reset p1 for next increment
+      k = k + 1;
+      if (k == 100000){
+         break; //If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
+      }
+   } while (!(ksh < kmin)); //Loop Until ksh < kmin
+   
+   pcrits = p2;//end of line for element z
+} //endsub//
 
 // LEAVES block
 // gmax per leaf area in mmol m-2s-1

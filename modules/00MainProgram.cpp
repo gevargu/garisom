@@ -928,21 +928,21 @@ void MainProgram::readSiteAreaValues(){
 
 // /* Get pcrits */
 void MainProgram::componentpcrits(){ //'gets pcrits
-     soilcalculator.rhizocurves(z, layers,p1,p2,k,e,erh,krh,pinc,kmin,olds,t,a,n,kmaxrh,s,it,tnm,del,x,sum,pcritrh);
-//     //rootcurves(); //'gets root element curves
-//     //stemcurve(); //'gets stem element curve
-//     //pcrits;
-//     //leafcurve(); //'gets leaf element curve
-//     //pcritl;
+    soilcalculator.get_rhizoPcrit(z, layers,p1,p2,k,e,erh,krh,pinc,kmin,olds,t,a,n,kmaxrh,s,it,tnm,del,x,sum,pcritrh);
+    hydraulicscalculator.get_rootPcrit(er,kr,z,layers,ksatr,p1,p2,pinc,k,e,olds,t,root_b,root_c,s,it,tnm,del,x,sum,f,epsx,kmin,pcritr);
+    //stemcurve(); //'gets stem element curve
+    pcrits;
+    //leafcurve(); //'gets leaf element curve
+    pcritl;
     
-//     //rootcurves_v(); //erases history for md solution
-//     //stemcurve(true);
-//     //leafcurve(true);
+    hydraulicscalculator.get_rootPcrit_v(er_v,kr_v,z,layers,ksatr,p1,p2,pinc,k,e,olds,t,root_b,root_c,s,it,tnm,del,x,sum,f,epsx,kmin,pcritr); //erases history for md solution
+    //stemcurve(true);
+    //leafcurve(true);
 
-//     //memset(ter, 0, sizeof(ter));
-//     //memset(tkr, 0, sizeof(tkr));
-//     //memset(tes, 0, sizeof(tes));
-//     //memset(tel, 0, sizeof(tel));
+    //memset(ter, 0, sizeof(ter));
+    //memset(tkr, 0, sizeof(tkr));
+    //memset(tes, 0, sizeof(tes));
+    //memset(tel, 0, sizeof(tel));
 }
 
 /* Running the model */ 
