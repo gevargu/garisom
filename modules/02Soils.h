@@ -27,6 +27,17 @@ public:
     // Soil water status
     double get_rvg(double* a, double* n, const double& x, const long& z);
     double get_swc(double* a, double* n, const double& x, const long& z);
+    void get_soilwetness(double& drainage, double& runoff, long& dd, bool& isNewYear, bool& useGSData, long& gs_yearIndex, 
+                            double& waterold, long& z, int& layers, double& x, double* thetafracres, double* thetafracfc, double* a, 
+                            double* n, double& fieldcapfrac, double* thetafc, double* thetasat, double* water, double* depth,
+                            double* fc, double& ffc, double dataCells[2000001][101], long& rowD, long& colD, long& dColF_End_watercontent,
+                            double* gs_ar_input, double* gs_ar_waterInitial_OFF, double* gs_ar_waterInitial, std::string& night,
+                            double& layerflow, double& baperga, double& lai,double elayer[6][100001], long& halt, double& laisl, long& haltsh,
+                            double& laish, double& timestep, double* soilredist, double& deficit, double* swclimit, long& iter_Counter,
+                            double& tod, long& stage_ID, bool& mode_predawns, long& dColRain, double& rain, bool& rainEnabled, bool& ground,
+                            long* layer, double& waternew, double& waterchange, double* gs_ar_waterFinal, long& dColF_End_waterchange,
+                            long& dColF_End_rain, long& dColF_End_gwater, double& gwflow, long& dColF_End_drainage, long& dColF_End_input,
+                            long& dColF_End_runoff);
     // Van Genuchten Integration
     void trapzdvg(const long& t,double* a, double* n, double* kmaxrh,const long& z, double& p1, double& p2, double& s, long& it, long& tnm, double& del, double& x, double& sum);
     void qtrapvg(double& olds, long& t,double* a, double* n, double* kmaxrh,const long& z, double& p1, double& p2, double& s, long& it, long& tnm, double& del, double& x, double& sum);

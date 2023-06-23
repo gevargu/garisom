@@ -34,11 +34,14 @@ public:
     double get_stemkmax(double stempercent, double rsatp);
     void trapzdwbs(const long &t, double &p1, double &p2, const double& b, const double& c, const double& ksats,double &s, long& it, long& tnm, double& del, double& x, double& sum);
     void qtrapwbs(double& olds, long &t, const long& f, double &p1, double &p2, const double& b, const double& c, const double& ksats,double &s, long& it, long& tnm, double& del, double& x, double& sum, double& epsx);
-    
+    void get_stemPcrit(double* es,bool vCurve, double* es_v, double &p1, double &p2, const double& pinc,long& k, double& e,double& olds, long &t, const long& f, const double& b, const double& c, const double& ksats,double &s, long& it, long& tnm, double& del, double& x, double& sum, double& epsx, double& ksh, const double& kmin, double& pcrits);
     // leaves block
-    double get_gmaxl(double gmax, double laperba);
-    double get_leafkmax(double ksatp, double leafpercent);
-    double get_LSC(double ksatl, double laperba);
+    double get_gmaxl(const double& gmax, const double& laperba);
+    double get_leafkmax(const double& ksatp, const double& leafpercent);
+    double get_LSC(const double& ksatl, const double& laperba);
+    void trapzdwbl(long &t, double &p1, double &p2, const double& b, const double& c, const double& ksatl, double &s, long& it, long& tnm, double& del, double& x, double& sum);
+    void qtrapwbl(double& olds, long& t, const long& f,double &p1, double &p2, const double& b, const double& c, const double& ksatl,double &s, long& it, long& tnm, double& del, double& x, double& sum, double& epsx);
+    void get_leafPcrit(double* el, bool vCurve, double* el_v, double &p1, double &p2, const double& pinc,long& k, double& e, double& olds, long& t, const long& f, const double& b, const double& c, const double& ksatl,double &s, long& it, long& tnm, double& del, double& x, double& sum, double& epsx, double& ksh, const double& kmin, double& pcritl);
 };
 
 #endif

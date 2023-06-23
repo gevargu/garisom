@@ -750,26 +750,32 @@ void MainProgram::InitialConditions(){
         //Call setValueFromName("o_co2AmbPa", ca * patm * 1000) // this is a pure output from the Excel version, OK to disable here
         // the value in this cell will not be referenced again by the model
         // Will replace when loading the GS data
-            
-            if(mode_predawns == true){ // one soil layer for pre-dawn configuration
-                layers = 1;
-            } else {}
-            if (stage_ID == STAGE_ID_NONE || stage_ID == STAGE_ID_HIST_STRESS || stage_ID == STAGE_ID_FUT_STRESS || stage_ID == STAGE_ID_FUT_STRESS_NOACCLIM) {
-                if (GS_mode == true) {
-                    useGSData = true;
-                } else {
-                    useGSData = false;
-                } // endif
-            } else if (stage_ID == STAGE_ID_HIST_OPT || stage_ID == STAGE_ID_FUT_OPT) {
-                if (GS_mode == 1) { // different parameter name
-                    useGSData = true;
-                } else {
-                    useGSData = false;
-                } // endif
-            } else{ // impossible unknown stage failsafe
-                useGSData = false;
-            }
         }
+    }
+    
+    if (raining == true) {
+        rainEnabled = false;
+    } else {
+        rainEnabled = true; //enabled is made the "else" case becasue the "default" state is to process rain, so any input OTHER than //n// enables
+    }
+    if(mode_predawns == true){ // one soil layer for pre-dawn configuration
+        layers = 1;
+    } else {}
+    
+    if (stage_ID == STAGE_ID_NONE || stage_ID == STAGE_ID_HIST_STRESS || stage_ID == STAGE_ID_FUT_STRESS || stage_ID == STAGE_ID_FUT_STRESS_NOACCLIM) {
+        if (GS_mode == true) {
+            useGSData = true;
+        } else {
+            useGSData = false;
+        } // endif
+    } else if (stage_ID == STAGE_ID_HIST_OPT || stage_ID == STAGE_ID_FUT_OPT) {
+        if (GS_mode == 1) { // different parameter name
+            useGSData = true;
+        } else {
+            useGSData = false;
+        } // endif
+    } else{ // impossible unknown stage failsafe
+        useGSData = false;
     }
 }
 
@@ -930,19 +936,405 @@ void MainProgram::readSiteAreaValues(){
 void MainProgram::componentpcrits(){ //'gets pcrits
     soilcalculator.get_rhizoPcrit(z, layers,p1,p2,k,e,erh,krh,pinc,kmin,olds,t,a,n,kmaxrh,s,it,tnm,del,x,sum,pcritrh);
     hydraulicscalculator.get_rootPcrit(er,kr,z,layers,ksatr,p1,p2,pinc,k,e,olds,t,root_b,root_c,s,it,tnm,del,x,sum,f,epsx,kmin,pcritr);
-    //stemcurve(); //'gets stem element curve
+    bool vCurve = false;
+    hydraulicscalculator.get_stemPcrit(es,vCurve,es_v,p1,p2,pinc,k,e,olds,t,f,stem_b,stem_c,ksats,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcrits); //'gets stem element curve 
     pcrits;
-    //leafcurve(); //'gets leaf element curve
+    hydraulicscalculator.get_leafPcrit(el,vCurve,el_v,p1,p2,pinc,k,e,olds,t,f,leaf_b,leaf_c,ksatl,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcritl); //'gets leaf element curve
     pcritl;
     
     hydraulicscalculator.get_rootPcrit_v(er_v,kr_v,z,layers,ksatr,p1,p2,pinc,k,e,olds,t,root_b,root_c,s,it,tnm,del,x,sum,f,epsx,kmin,pcritr); //erases history for md solution
-    //stemcurve(true);
-    //leafcurve(true);
+    vCurve = true;
+    hydraulicscalculator.get_stemPcrit(es,vCurve,es_v,p1,p2,pinc,k,e,olds,t,f,stem_b,stem_c,ksats,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcrits);
+    hydraulicscalculator.get_leafPcrit(el,vCurve,el_v,p1,p2,pinc,k,e,olds,t,f,leaf_b,leaf_c,ksatl,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcritl);
 
-    //memset(ter, 0, sizeof(ter));
-    //memset(tkr, 0, sizeof(tkr));
-    //memset(tes, 0, sizeof(tes));
-    //memset(tel, 0, sizeof(tel));
+    memset(ter, 0, sizeof(ter));
+    memset(tkr, 0, sizeof(tkr));
+    memset(tes, 0, sizeof(tes));
+    memset(tel, 0, sizeof(tel));
+}
+
+/* Time step iterator function */
+long MainProgram::modelTimestepIter(long& VBA_dd) {
+    dd = VBA_dd;
+    
+    if (dd == 1 || isNewYear) {
+        failure = 0;//'=1 for system failure at midday...terminates run
+        failspot = "no failure";
+        componentpcrits();//'gets pcrits for each component
+        failspot = "no failure";
+
+        for (k = 1; k <= layers; k++) {// k = 1 To layers ;//'exclude the top layer
+            kminroot[k] = ksatr[k];
+        }
+
+        kminstem = ksats;
+        kminleaf = ksatl;
+        kminplant = ksatp;
+
+        gwflow = 0; //'inflow to bottom of root zone
+        drainage = 0; //'drainage from bottom of root zone
+
+        gs_prevDay = 0;
+        gs_inGrowSeason = false;
+        gs_doneFirstDay = false; // prevents PLC misses on first year
+        //[/HNT]
+    }
+
+    //dd++;
+    long testCount = 0;
+    yearVal = std::lround(dSheet.Cells(rowD + dd, colD + dColYear));
+    
+    if (yearVal != year_cur) {// all of these year values get zeroed out during initModelVars, so we can assume they will be zero at the start of a new iteration and test against 0 meaning "not set"
+        
+        if (yearVal > year_cur && yearVal > year_start) {
+            // if the start year is zero, this is the first year we've processed
+            if (year_start == 0){ // model runs starting in the year zero are not supported, I guess?
+                year_start = yearVal;
+            }
+            year_cur = yearVal;
+
+            gs_yearIndex = year_cur - year_start;
+            if (gs_yearIndex >= 100) {
+                gs_yearIndex = 99; //safety check
+            }
+
+            gs_ar_years[gs_yearIndex] = year_cur; // correct the year listing in the "growing seasons" array 
+            // TODO make that input data able to handle the new system?? Otherwise just eliminate
+            // on VBA side it might be sufficient to pull the start year from the first line of data
+            // though this still assumes that our data is in linear time order ...
+
+            if (gs_yearIndex > 0) {
+                // if we've set the year and it was anythign other than the first timestep of this iteration (in which case we set the year index from zero TO zero)
+                // then return to VBA and let it handle the model reset
+                // it will re-run this timestep afterwards
+                gs_prevDay = 0;
+                gs_inGrowSeason = false;
+                gs_doneFirstDay = false;
+                isNewYear = true; // this can be used to override the dd==/>1 cases -- it will be set to false upon successful completion of a timestep
+                return gs_yearIndex;
+            } // if we detected a year change, but the yearIndex comes out to zero, then this must be the first timestep
+            // of the first year in the data -- so we can continue without returning and re-setting the model
+         } else { // going back in time means something went wrong -- may be able to handle out of order years later though 
+            return 0; // failure
+        }
+    }
+
+    jd = dSheet.Cells(rowD + dd, colD + dColDay); //'julian day
+
+    //Debug.Print "DOING A LOOP-1 " & dd
+
+    if (dd > 1 && !isNewYear) { //if// //'set timestep
+        if (tod < dSheet.Cells(rowD + dd, colD + dColTime)) { //if// //'same old day getting older
+            timestep = dSheet.Cells(rowD + dd, colD + dColTime) - tod;
+        } else {
+            timestep = (24 - tod) + dSheet.Cells(rowD + dd, colD + dColTime); //'a new day has started
+            //[HNT] multi-year support
+            // following method of new year detection has been replaced with the method above
+            // now that we are including the year as a data input
+            gs_prevDay = jd;
+            gs_inGrowSeason = true; // isInGrowSeasonSimple(); //it's a new day, so let's see if this is in the growing season or not
+            //[/HNT]
+        } //End if// //'tod if
+    } else {//End if// //'dd>1 if [HNT] multi-year support
+        gs_inGrowSeason = true; // isInGrowSeasonSimple(); //it's the first data point, test if we're starting in growing season
+    }
+
+    gs_inGrowSeason = isInGrowSeasonSimple(); // just always call this!
+    //[/HNT]
+
+    tod = dSheet.Cells(rowD + dd, colD + dColTime); //'time of day, standard local time in hour fraction
+    obssolar = dSheet.Cells(rowD + dd, colD + dColSolar); //'observed total solar, horizontal, wm-2
+    vpd = dSheet.Cells(rowD + dd, colD + dColD); //'midday vpd in kPa
+    vpd = vpd / patm; //'vpd in mole fraction
+    airtemp = dSheet.Cells(rowD + dd, colD + dColTAir); //'in C
+    maxvpd = (101.3 / patm) * (-0.0043 + 0.01 * exp(0.0511 * airtemp)); //'saturated mole fraction of vapor in air
+    wind = dSheet.Cells(rowD + dd, colD + dColWind); //'wind speed
+    if (wind < minwind) { //if//
+        dataCells[rowD + dd][colD + dColWind] = minwind; //'set to minimum wind, Cells does not work for writing
+        wind = minwind;
+    } //End if//
+    us = wind * 0.1; //'understory windspeed in m s-1
+    soiltemp = dSheet.Cells(rowD + dd, colD + dColTSoil); //'surface temp of soil
+    
+    if (vpd > maxvpd) { //if//
+        vpd = maxvpd;
+        dataCells[rowD + dd][colD + dColD] = maxvpd * patm; //'print out maximum vpd
+    } //End if//
+
+    soilcalculator.get_soilwetness(); //'after initializing, start updating water contents of soil layers
+    solarcalc(); //'get radiation for timestep
+    if (qsl > lightcomp /*[HNT] multiyear*/ && gs_inGrowSeason /*[/HNT]*/) { //if//
+        night = "n"; //'it//'s light enough for sun layer to do business
+    } else {
+        night = "y"; //'too dark
+    } //End if// //'end night if
+
+    gwflow = 0; //'re-set inflow to bottom of root zone
+    drainage = 0; //'re-set drainage from bottom of root zone
+                    //'Call getpredawns //'update soil pressure of each layer
+                    //'if failure = 1 { //if// Exit do
+    chalk = 0; //'einc counter
+
+   twentyMarker:
+
+    getpredawns(); //'passed initializing...update soil pressure of each layer
+
+    if (failure == 1){
+        return -1;//break;//Exit do
+    }
+
+    test = 0; //'=1 if stem or leaf fails
+    p = -1; //'E(Pleaf) point counter
+              //'set initial guesses of the three unknowns
+    e = -einc; //'total e: einc and e are still in kg hr-1 m-2 basal area, as are conductances
+                 //'Range("c18:i10000").ClearContents
+    psynmax = -100;
+    psynmaxsh = -100;
+    skip = 0; //'this turns off psynthesis
+
+    do{ //'this loop obtains and stores the entire composite curve
+        p = p + 1;
+        e = e + einc;
+        newtonrhapson(); //'solves for p//'s and e//'s in fingers of chicken foot
+                          //'if check >= 400 { //if// GoTo 60: //'NR can//'t find a solution
+        if (check > 500) { //if//
+            break;//Exit do
+        } //End if// //'test for total failure
+        
+        sum = 0;
+        for (k = 1; k <= layers; k++) {//k = 1 To layers
+            sum = sum + layer[k];
+        } //end for k
+        
+        if (sum == layers) { //if//
+            failspot = "below ground"; //'total failure below ground
+            break;//Exit do
+        } //End if//
+        
+        stem(); //'gets stem and leaf pressures
+        leaf();
+        
+        if (test == 1) {
+            break;//Exit do
+        } 
+        
+        compositecurve(); //'stores the entire composite curve
+        //'if skip = 0 { //if//
+        leaftemps(); //'gets sun layer leaf temperature from energy balance
+        leaftempsshade(); //'gets shade layer leaf temperature
+        assimilation(); //'gets sun layer photosynthesis
+        assimilationshade(); //'gets shade layer photosynthesis
+
+    } while (!(sum == layers || test == 1 || night == "y" && (dd > 1 && !isNewYear) || check >= 500)); //'loop to complete failure unless it//'s night
+
+    if (chalk > 0) { //if//
+        weird = 0; //'done our best
+        failspot = "convergence";
+        for (z = 1; z <= layers; z++) {//z = 1 To layers //'restore layers to functioning if they//'ve been turned off by convergence failure
+            if (kminroot[z] != 0) {
+               layer[z] = 0;
+            }
+        } //end for z
+
+        goto fortyMarker; //'got as much of the composite curve as is going to happen
+    } //End if//
+    
+    if (dd == 1 || isNewYear || night == "n") { //if//
+
+        if (check >= 500) { //if// //'try once more //'Stop
+            chalk = chalk + 1;
+            if (ecritsystem == 0) {
+                einc = ksatp / 500.0;
+                std::cout << "ecritsystem is zero... try resetting to ksatp/500, dd = " << dd << std::endl;
+            }
+            goto twentyMarker;
+        } //End if//
+
+        if (total > 500 || total < 400) { //if//
+            einc = ecritsystem / 450.0; //'re-set Einc
+            if (ecritsystem == 0) {
+                einc = ksatp / 500.0;
+                std::cout << "ecritsystem is zero... try resetting to ksatp/500, dd = " << dd << std::endl;
+            }
+            testCount++; // [DEBUG]
+            if (testCount > 10) {
+                testCount = 0;
+                goto fortyMarker;
+            }
+            goto twentyMarker; //'recalculate the composite curve
+        } //End if// //'total ok
+    } //End if// //'night <>"n" or it//'s not the first round
+
+   fortyMarker:
+
+    bool isNight = true;
+    if (night == "n"){
+        isNight = false;
+    }
+    if (night == "n" && psynmax > 0 && psynmaxsh > 0 && weird == 0) { //if//
+        //DoEvents //'[HNT] this was required to prevent a hard lock -- this portion of the loop is the most intensive, so let Excel take a "breath" by processing system events to prevent lockup
+        canopypressure(); //'returns canopy P and associated output
+                           //'if check >= 2000 { //if// GoTo 60:
+        if (refilling == "n") {
+            updatecurves(); //'updates element E(P) curves as required for midday exposure for no refilling
+        }
+    } //End if// //'night <> "n", psynmax IF
+
+    if (soilred == "y") { //if//
+        soilflow(); //'gets vertical soil flow between layers in m3/m2
+    } else {
+        for (z = 0; z <= layers; z++) {//z = 0 To layers
+            soilredist[z] = 0;
+        } //end for z
+    } //End if// //'soil red <> y
+    
+    if (ground == "y") {
+        deepflow(); //'gets groundwater flow into bottom layer in m3/m2
+    } //End if// //'pet <> y or n
+    
+    if (gs_inGrowSeason && sevap == "y") { //if//
+        soilevaporation(); //'gets soil evaporation rate
+    } else {
+        soilevap = 0;
+    } //End if//
+
+    if (failure == 0 || weird == 1) { //if// //Debug.Print "DOING A LOOP-8 " & dd
+        if (night == "y" || psynmax == 0 || psynmaxsh == 0) { //if// //'set everything to starting point
+            k = 0;
+            transpiration = eplantl[k]; //'all gas exchange values are for closed stomata
+            md = pleaf[k];
+            psynact = psyn[k];
+            gcmd = gcanw[k]; //'g for water in mmol
+            lavpdmd = lavpd[k] * patm;
+            cinc = cin[k];
+            halt = k;
+            transpirationsh = eplantl[k]; //'all gas exchange values are from most recent historical values
+            mdsh = pleaf[k];
+            psynactsh = psynsh[k];
+            gcmdsh = gcanwsh[k]; //'g for water in mmol
+            lavpdmdsh = lavpdsh[k] * patm;
+            cincsh = cinsh[k];
+            haltsh = k; //'halt is index of midday datum
+        } //End if// //'night<>y
+
+        dSheet.Cells(rowD + dd, colD + o + dColF_predawn) = pleaf[0]; //'the predawn
+        //'SUN LAYER OUTPUT
+        dSheet.Cells(rowD + dd, colD + o + dColF_P) = md; //'the midday
+        dSheet.Cells(rowD + dd, colD + o + dColF_E) = transpiration; //'midday transpiration, mmol s-1 m-2 leaf area
+        dSheet.Cells(rowD + dd, colD + o + dColF_Gw) = gcmd; //'midday canopy diffusive conductance to water, mmol s-1m-2
+        dSheet.Cells(rowD + dd, colD + o + dColF_laVPD) = lavpdmd; //'leaf-to-air vpd
+        dSheet.Cells(rowD + dd, colD + o + dColF_leaftemp) = leaftemp[halt]; //'leaf temp
+        dSheet.Cells(rowD + dd, colD + o + dColF_ANet) = psynact; //'net A in umol s-1m-2 leaf area
+        //'anet = psynact //'keeping this old setting just in case downstream Anet is needed
+        //'Cells(16 + dd, o + 21) = chalk //'number of NR restarts
+        dSheet.Cells(rowD + dd, colD + o + dColF_ci) = cinc * patm * 1000; //'partial pressure of CO2 in Pa
+        dSheet.Cells(rowD + dd, colD + o + dColF_PPFD) = qsl; //'umol s-1m-2 photon flux density
+        //'SHADE LAYER OUTPUT
+        dSheet.Cells(rowD + dd, colD + o + dColF_S_P) = mdsh; //'the midday
+        dSheet.Cells(rowD + dd, colD + o + dColF_S_E) = transpirationsh; //'midday transpiration, mmol s-1 m-2 leaf area
+        dSheet.Cells(rowD + dd, colD + o + dColF_S_Gw) = gcmdsh; //'midday canopy diffusive conductance to water, mmol s-1m-2
+        dSheet.Cells(rowD + dd, colD + o + dColF_S_laVPD) = lavpdmdsh; //'leaf-to-air vpd
+        dSheet.Cells(rowD + dd, colD + o + dColF_S_leaftemp) = leaftempsh[haltsh]; //'leaf temp
+        dSheet.Cells(rowD + dd, colD + o + dColF_S_Anet) = psynactsh; //'A in umol s-1m-2 leaf area
+        //'anetsh = psynactsh //'see above
+        //'Cells(16 + dd, o + 30) = dpasun //'for debugging purposes
+        dSheet.Cells(rowD + dd, colD + o + dColF_S_ci) = cincsh * patm * 1000; //'partial pressure of CO2 in Pa
+        dSheet.Cells(rowD + dd, colD + o + dColF_S_PPFD) = qsh; //'umol s-1m-2 photon flux density
+        //'WHOLE TREE OUTPUT
+        if (night == "n"){
+            transpirationtree = laisl / lai * transpiration + laish / lai * transpirationsh; //'weighted mean
+        }    
+        if (night == "y"){
+            transpirationtree = transpiration;
+        }
+        if (night == "n"){
+            atree = laisl / lai * psynact + laish / lai * psynactsh; //'weighted mean
+        }
+        if (night == "y"){
+            atree = (psynact + psynactsh) / 2.0; //'simple average at night when there//'s no sun or shade leaves
+        }
+        dSheet.Cells(rowD + dd, colD + o + dColF_T_E) = transpirationtree; //'weighted mean
+        dSheet.Cells(rowD + dd, colD + o + dColF_T_ANet) = atree;
+        //'Cells(16 + dd, o + 35) = dpamax //'shade leaf dpa
+        //'HYDRAULIC OUTPUT (BASED ON SUN MD)
+        dSheet.Cells(rowD + dd, colD + o + dColF_T_pcrit) = pcritsystem;
+        dSheet.Cells(rowD + dd, colD + o + dColF_T_Ecrit) = ecritsystem * (1 / laperba) * (1.0 / 3600.0) * 55.4 * 1000; //'ecrit in mmol s-1m-2
+        dSheet.Cells(rowD + dd, colD + o + dColF_CP_Pstem) = pstem[halt];
+        dSheet.Cells(rowD + dd, colD + o + dColF_CP_Proot) = proot[halt];
+        dSheet.Cells(rowD + dd, colD + o + dColF_CP_kstem) = kstem[halt]; //'k stem at midday in kg hr-1m-2MPa-1
+        dSheet.Cells(rowD + dd, colD + o + dColF_CP_kleaf) = kleaf[halt]; //'k in leaf at midday
+
+        if (transpiration > 0) { //if//
+            kplantold = eplant[halt] / (pleaf[halt] - pleaf[0]);  //'whole plant k at midday in kg hr-1 m-2 basal area...sun value
+            dSheet.Cells(rowD + dd, colD + o + dColF_CP_kplant) = kplantold;
+        } //End if//
+        if (transpiration == 0){
+            dSheet.Cells(rowD + dd, colD + o + dColF_CP_kplant) = kplantold; //'use most recent kplant
+        }
+
+        if (kplantold < gs_ar_kPlant[gs_yearIndex] || gs_ar_kPlant[gs_yearIndex] == 0){
+            gs_ar_kPlant[gs_yearIndex] = kplantold;
+        }
+        k = o + dColF_CP_kroot1 - 1;//43;
+        sum = 0;
+        for (z = 1; z <= layers; z++) {//z = 1 To layers
+            dSheet.Cells(rowD + dd, colD + k + z) = kroot[z][halt]; //'root k at midday, sun fluxes
+            sum = sum + kroot[z][halt];
+        } //end for z
+        dSheet.Cells(rowD + dd, colD + k + 1 + layers) = sum; //'total root k at midday
+        if (failure == 0) { //if//
+            double tempDouble = 0.0;
+            tempDouble = 1 / (1 / kminleaf + 1 / kminstem + 1 / dSheet.Cells(rowD + dd, colD + k + 1 + layers)); //'total xylem k
+            dSheet.Cells(rowD + dd, colD + k) = tempDouble; //1 / (1 / kminleaf + 1 / kminstem + 1 / dSheet.Cells(rowD + dd, colD + k + 1 + layers)); //'total xylem k
+            if (tempDouble < gs_ar_kXylem[gs_yearIndex] || gs_ar_kXylem[gs_yearIndex] == 0)
+               gs_ar_kXylem[gs_yearIndex] = tempDouble;
+        } //End if//
+        
+        for (z = 1; z <= layers; z++){//z = 1 To layers
+            dSheet.Cells(rowD + dd, colD + k + 1 + layers + z) = elayer[z][halt] * (1 / laperba) * (1.0 / 3600.0) * 55.56 * 1000; //'uptake in mmol s-1m-2 leaf area...sun rate
+        } //end for z
+        //'Cells(16 + dd, k + 2 + 2 * layers) = failspot //'position of failure at critical point
+
+        // TODO since all IO is being handled as double currently, cannot add these failure notes
+        // temporarily putting in an obvious number to flag failure
+        for (z = 1; z <= 1; z++){//z = 1 To 1
+            if (layer[z] == 1){
+                dSheet.Cells(rowD + dd, colD + k + 2 + 2 * layers + z) = -1137;// layerfailure[z]; //'layers failed at critical point
+            }
+        } //end for z
+        //Debug.Print "DOING A LOOP-9 " & dd
+    } //End if// //'failure IF (basically...failure can//'t happen!)
+
+
+    if (dd == 1 || isNewYear) { //if// //'NOTE: must be sure that pcritsystem is computed for dd=1!!! (i.e., it//'s not computed at night)
+        x = pcritsystem; //'estimate of "permanent wilting point"
+        for (z = 1; z <= layers; z++) { //z = 1 To layers
+            swclimit[z] = swc(x); //'theta/thetasat at critical point
+            swclimit[z] = swclimit[z] * thetasat[z]; //'convert to water content
+            swclimit[z] = swclimit[z] * depth[z]; //'water content left over in m3/m2 ground area
+            //'sumsoil = sumsoil + (fc[z] - swclimit[z]) //'sum is total m3 water per m2 ground withdrawn
+        } //end for z
+        //Debug.Print "DOING A LOOP-11 " & dd
+    } //End if//
+
+    //'now...need to reset layer failure status to midday values (not critical point)
+    for (z = 1; z <= layers; z++) {//z = 1 To layers
+        if (layer[z] == 1) { //if// //'check to see if kminroot[z]=0; otherwise, restore it to function
+            if (layerfailure[z] == "root" && kminroot[z] > 0) { //if//
+                layer[z] = 0;
+                layerfailure[z] = "ok";
+            } //End if//
+            if (layerfailure[z] == "rhizosphere" && kminroot[z] > 0) { //if//
+                layer[z] = 0;
+                layerfailure[z] = "ok";
+            } //End if//
+        } //End if//
+    } //end for z
+
+    if (isNewYear){
+        isNewYear = false; // always set this
+    }
+    return -1;
 }
 
 /* Running the model */ 
@@ -1058,30 +1450,37 @@ long MainProgram::Rungarisom(){
     failspot = "no failure";
     componentpcrits(); //gets pcrits for each component
     failspot = "no failure";
-    std::cout << std::endl;
     
-    std::cout << "------------------ TESTING AREA ------------------"<< std::endl; 
-    std::cout << " Rhizosphere Resistance: " << rhizor << std::endl;
-    std::cout << std::endl;
-    std::cout << "Rhizosphere Conductance: " << kmaxrh[1] << std::endl;
-    
-    std::cout << std::endl;
-    std::cout << "Rhizosphere Resistance: " << rhizor << std::endl;
-    std::cout << std::endl;
-    std::cout << "Rhizosphere Conductance: " << kmaxrh[1] << std::endl;
     for (k = 1; k <= layers; k++){ // k = 1 To layers //exclude the top layer
-        //kminroot[k] = ksatr[k];
+        kminroot[k] = ksatr[k];
     } // Next k
 
-    //kminstem = ksats;
-    //kminleaf = ksatl;
-    //kminplant = ksatp;
+    kminstem = ksats;
+    kminleaf = ksatl;
+    kminplant = ksatp;
 
-    //gwflow = 0; //inflow to bottom of root zone
-    //drainage = 0; //drainage from bottom of root zone
+    gwflow = 0; //inflow to bottom of root zone
+    drainage = 0; //drainage from bottom of root zone
 
-    //dd = 0;
+    dd = 0;
     long ddMod = 0;
     long successCode = 0;
+
+    do { // loop through time steps
+        dd = dd + 1;
+
+        successCode = modelTimestepIter(dd);
+
+    } while (!(dSheet.Cells(rowD + 1 + dd, colD + dColDay) < 0.01));
+    
+    std::cout << "------------------ TESTING AREA ------------------"<< std::endl; 
+    std::cout << " Rhizosphere Pcrit layer 1: " << pcritrh[1] << std::endl;
+    std::cout << std::endl;
+    std::cout << "       Roots Pcrit layer 1: " << pcritr[1] << std::endl;
+    std::cout << std::endl;
+    std::cout << "                Stem Pcrit: " << pcrits << std::endl;
+    std::cout << std::endl;
+    std::cout << "                Leaf Pcrit: " << pcritl << std::endl;
+    std::cout << std::endl;
 
 }

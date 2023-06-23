@@ -1,4 +1,7 @@
 // Functions to extract weibull parameters and fit weibull function
+// TO-DO: merge stem and leaves integration functions as these could be just generic functions
+// TO-DO: after merging stem and leaves integration functions check possibility of merging root integration functions
+
 #include "03Hydraulics.h"
 
 // Weibull parameter c
@@ -163,7 +166,7 @@ double hydraulics::get_stemkmax(double stempercent, double rsatp){
    return 1.0 / ((stempercent / 100.0) * rsatp);
 }
 
-// integrates stem element z weibull
+// integrates stem elemente weibull
 void hydraulics::trapzdwbs(const long &t, double &p1, double &p2, const double& b, const double& c, const double& ksats,double &s, long& it, long& tnm, double& del, double& x, double& sum){ //integrates stem element weibull
    
    if (t == 1) {
@@ -185,7 +188,7 @@ void hydraulics::trapzdwbs(const long &t, double &p1, double &p2, const double& 
    }
 }
 
-void hydraulics::qtrapwbs(double& olds, long &t, const long& f, double &p1, double &p2, const double& b, const double& c, const double& ksats,double &s, long& it, long& tnm, double& del, double& x, double& sum, double& epsx){ //evaluates accuracy of root element z integration
+void hydraulics::qtrapwbs(double& olds, long& t, const long& f, double &p1, double &p2, const double& b, const double& c, const double& ksats,double &s, long& it, long& tnm, double& del, double& x, double& sum, double& epsx){ //evaluates accuracy of root element z integration
    
    olds = -1; //starting point unlikely to satisfy if statement below
    
@@ -200,7 +203,7 @@ void hydraulics::qtrapwbs(double& olds, long &t, const long& f, double &p1, doub
 }
 
 // stem E(P) curve
-void hydraulics::get_stemPcrit(double* es,bool vCurve = false, double* es_v, double &p1, double &p2) {
+void hydraulics::get_stemPcrit(double* es,bool vCurve, double* es_v, double &p1, double &p2, const double& pinc,long& k, double& e,double& olds, long &t, const long& f, const double& b, const double& c, const double& ksats,double &s, long& it, long& tnm, double& del, double& x, double& sum, double& epsx, double& ksh, const double& kmin, double& pcrits) {
    
    double* es_ptr = es;
    
@@ -235,18 +238,81 @@ void hydraulics::get_stemPcrit(double* es,bool vCurve = false, double* es_v, dou
 
 // LEAVES block
 // gmax per leaf area in mmol m-2s-1
-double hydraulics::get_gmaxl(double gmax, double laperba){
+double hydraulics::get_gmaxl(const double& gmax, const double& laperba){
    return gmax * (1.0 / laperba) * (1 / 3600.0) * 55.56 * 1000.0;
 }
 // Leaf conductance per basal area
-double hydraulics::get_leafkmax(double ksatp, double leafpercent){
+double hydraulics::get_leafkmax(const double& ksatp, const double& leafpercent){
    return ksatp * (100.0 / leafpercent);
 }
 // Leaf specific conductance in kg hr-1m-2MPa-1
-double hydraulics::get_LSC(double ksatl, double laperba){
+double hydraulics::get_LSC(const double& ksatl, const double& laperba){
    //lsc in kg hr-1m-2MPa-1
    //lsc per leaf area in kg hr - 1 
    //Call setValueFromName("o_leafLSC", lsc / (3600 * 0.00001805)) 
    //Cells(2, 9) = lsc / (3600 * 0.00001805) //lsc converted to mmol s - 1m - 2MPa - 1
    return ksatl * 1.0 / laperba; 
 }
+
+// integrate leaf element weibull
+void hydraulics::trapzdwbl(long &t, double &p1, double &p2, const double& b, const double& c, const double& ksatl, double &s, long& it, long& tnm, double& del, double& x, double& sum) {
+   if (t == 1) {
+      double vg_p1 = get_weibullfit(p1,b,c,ksatl);
+      double vg_p2 = get_weibullfit(p2,b,c,ksatl);
+      s = 0.5 * (p2 - p1) * (vg_p1 + vg_p2);
+      it = 1;
+   } else {
+      tnm = it;
+      del = (p2 - p1) / tnm;
+      x = p1 + 0.5 * del;
+      sum = 0;
+      for (long j = 1; j <= it; j++) {
+         sum = sum + get_weibullfit(x,b,c,ksatl);
+         x = x + del;
+      }
+      s = 0.5 * (s + (p2 - p1) * sum / tnm);
+      it = 2 * it;
+   }
+}
+
+void hydraulics::qtrapwbl(double& olds, long& t, const long& f,double &p1, double &p2, const double& b, const double& c, const double& ksatl,double &s, long& it, long& tnm, double& del, double& x, double& sum, double& epsx) {
+   olds = -1; //starting point unlikely to satisfy if statement below
+   for (t = 1; t <= f; t++) {
+      trapzdwbl(t, p1, p2, b, c, ksatl, s, it, tnm, del, x, sum);
+      if (std::abs(s - olds) <= epsx * std::abs(olds)) {
+         return;
+      }
+      olds = s;
+   }
+}
+
+// leaves E(P) curve
+void hydraulics::get_leafPcrit(double* el, bool vCurve, double* el_v, double &p1, double &p2, const double& pinc,long& k, double& e, double& olds, long& t, const long& f, const double& b, const double& c, const double& ksatl,double &s, long& it, long& tnm, double& del, double& x, double& sum, double& epsx, double& ksh, const double& kmin, double& pcritl) {
+   double* el_ptr = el;
+   if (vCurve) { 
+      memset(el_v, 0, sizeof(el_v));
+      el_ptr = el_v;
+   } else {
+      memset(el, 0, sizeof(el));
+   } //memset(el_ptr, 0, sizeof(el_ptr));//Erase el_ptr //eliminate values from previous calls
+   
+   p1 = 0;
+   k = 1;
+   e = 0; //value of integral
+   el_ptr[0] = 0;
+   do {
+      p2 = p1 + pinc;
+      qtrapwbl(olds, t, f, p1, p2, b, c, ksatl, s, it, tnm, del, x, sum, epsx);
+      e = e + s;
+      el_ptr[k] = e;
+      x = p2;
+      ksh = get_weibullfit(x,b,c,ksatl); //weibull k
+      p1 = p2; //reset p1 for next increment
+      k = k + 1;
+      
+      if (k == 100000){
+         break;
+      } //If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
+   } while (!(ksh < kmin)); //Loop Until ksh < kmin
+   pcritl = p2; //end of line for element z
+} //endsub//

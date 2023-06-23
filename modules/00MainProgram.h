@@ -72,6 +72,7 @@ public:
     const long bufferYears = 5; // throw out this many years when calculating optimal BA:GA to avoid the field capacity starting condition influencing the results
     double dataCells[DATAFILE_MAXROWS][DATAFILE_MAXCOLS]; // up to 2000k rows and 100 columns of input data
     double finalOutCells[MAX_SUMMARY_ROWS][MAX_SUMMARY_COLS];
+    double obssolar, vpd, airtemp, maxvpd, wind, us, soiltemp;
     // Growing season data
     std::string GSCells[101][11]; // contains the growing season start/end days
     // a much simpler class for the full C++ version which just wraps access to the dataSet[][] array in the dsheet.Cells command
@@ -110,7 +111,7 @@ public:
     const double absnir = 0.2; //'absorptivity of near infrared for leaves
 
     /* Model configuration */
-    bool hysteresis, refilling, ground, soilred, sevap, raining, bucket, reset_kmax,nonGS_water;
+    bool hysteresis, refilling, ground, soilred, sevap, raining, rainEnabled, bucket, reset_kmax,nonGS_water;
     bool nonGS_evaporation, GS_mode,useGSData, mode_predawns, iter_runSupplyCurve,iter_useAreaTable;
     bool iter_gwEnable,iter_ffcEnable, iter_bagaEnable, iter_yearsAsCount;
     int species_no;
@@ -176,15 +177,28 @@ public:
     std::string failspot, layerfailure[6];
     long failure, layer[6];
     double pcritrh[6], erh[6][100001], krh[6][100001];// rhizosphere
-    double pcritr[6], kr[6][100001], er[6][100001],er_v[6][100001], kr_v[6][100001];// roots
+    double pcritr[6], kr[6][100001], er[6][100001],er_v[6][100001], kr_v[6][100001], tkr[6][100001], ter[6][100001];// roots
     // stems
-    double pcrits, es[100001], es_v[100001];
+    double pcrits, ksh, es[100001], es_v[100001], tes[100001];
     // leaves
-    double pcritl, el_v[100001];
+    double pcritl, el[100001], el_v[100001], tel[100001];
 
-    // Integration variables
+    // Integration variables 
     long it, tnm, j, tmax;
     double del, eps, olds, p1, p2, e, s;
+
+    // Minimum conductivities
+    double kminroot[6], kminstem, kminleaf,kminplant;
+    // soil variables
+    double drainage, gwflow, thetafc[6], thetafracres[6], thetafracfc[6],fc[6],ffc;
+
+    // time-step counter
+    long dd, halt,haltsh;
+    double tod, timestep;
+    // required for soil wetness
+    double waterold, water[6], layerflow,elayer[6][100001],laisl,laish, soilredist[6], deficit, swclimit[6];
+    double rain, waternew, waterchange;
+    std::string night;
 
     /* Model outputs*/
     // time-step file columns
@@ -229,6 +243,7 @@ public:
     bool locateRanges();                    // might delete this function
     void readSiteAreaValues();              // TO-DO: incorporate this function into the model or delete
     void componentpcrits();                 // Get critical pressures (Pcrits)
+    long modelTimestepIter(long& VBA_dd);
     long Rungarisom();                      // function to run the program it replaces "modelProgramMain()" (H. Todd)
 };
 
