@@ -81,6 +81,7 @@
 #include "modules/02Soils.h" // module to perform soil calculations
 #include "modules/03Hydraulics.h"// module to fit weibull functions for xylem resistance
 #include "modules/04Morphology.h" // module to calculate root morphological traits
+#include "modules/05CAssimilation.h"// module with carbon assimilation and irradiance functions
 #include "modules/06MiscFunctions.h" // set of functions used to calculate parameter values at the beginning
 
 // Define classes

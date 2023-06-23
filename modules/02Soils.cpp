@@ -1,6 +1,5 @@
 // Functions to calculate soil parameters at start
 #include "02Soils.h"
-#include "00MainProgram.h"
 
 /* Soil structure */
 // Layer depths and % root ksat
@@ -242,17 +241,24 @@ void soils::get_rhizoPcrit(long& z, int& layers, double& p1, double& p2,long& k,
 
 /* Soil wetness*/
 //'gets predawns accounting for rain, groundwater flow, transpiration, and redistribution via soil and roots
-void soils::get_soilwetness(double& drainage, double& runoff, long& dd, bool& isNewYear, bool& useGSData, long& gs_yearIndex, 
-                            double& waterold, long& z, int& layers, double& x, double* thetafracres, double* thetafracfc, double* a, 
-                            double* n, double& fieldcapfrac, double* thetafc, double* thetasat, double* water, double* depth,
-                            double* fc, double& ffc, double dataCells[2000001][101], long& rowD, long& colD, long& dColF_End_watercontent,
-                            double* gs_ar_input, double* gs_ar_waterInitial_OFF, double* gs_ar_waterInitial, std::string& night,
-                            double& layerflow, double& baperga, double& lai,double elayer[6][100001], long& halt, double& laisl, long& haltsh,
-                            double& laish, double& timestep, double* soilredist, double& deficit, double* swclimit, long& iter_Counter,
-                            double& tod, long& stage_ID, bool& mode_predawns, long& dColRain, double& rain, bool& rainEnabled, bool& ground,
-                            long* layer, double& waternew, double& waterchange, double* gs_ar_waterFinal, long& dColF_End_waterchange,
-                            long& dColF_End_rain, long& dColF_End_gwater, double& gwflow, long& dColF_End_drainage, long& dColF_End_input,
-                            long& dColF_End_runoff) {
+void soils::get_soilwetness(double& drainage, double& runoff, double& waterold, double& x, double* thetafracres, double* thetafracfc, double* a,
+                            double* n, double& fieldcapfrac, double* thetafc, double* thetasat, double* water, double* depth, double* fc,
+                            double& ffc, double dataCells[2000001][101], double* gs_ar_input, double* gs_ar_waterInitial_OFF, double* gs_ar_waterInitial, 
+                            double& layerflow, double& baperga, double& lai,double elayer[6][100001], double& laisl, double& laish, double& timestep,
+                            double* soilredist, double& deficit, double* swclimit, double& tod, double& rain, double& waternew, double& waterchange,
+                            double* gs_ar_waterFinal, double& gwflow, double& transpirationtree, double& laperba, double& soilevap, double* gs_ar_E,
+                            double* gs_ar_ET, double& atree, double* gs_ar_Anet, double* gs_ar_cica, double& cinc, double& ca, long* gs_ar_cica_N,
+                            double* gs_ar_Aci, double* gs_ar_AnetDay, double& sum, double& kpday1, double& kxday1, double* gs_ar_waterInitial_GS,
+                            double* gs_ar_waterFinal_OFF, double& iter_refK, double* gs_ar_PLCSum, double* gs_ar_PLCSum_N, double* gs_ar_PLCp,
+                            double* gs_ar_PLC85, double* gs_ar_PLCx, double* gs_ar_waterInput_GS, double* gs_ar_waterFinal_GS, double* gs_ar_waterInput_OFF,
+                            int& layers, std::string& night,
+                            long& dd, long& gs_yearIndex, long& z, long& rowD, long& colD, long& dColF_End_watercontent, long& halt,  long& haltsh,
+                            long& iter_Counter, long& stage_ID, long& dColRain, long* layer, long& dColF_End_waterchange, long& dColF_End_rain,
+                            long& dColF_End_gwater, long& dColF_End_drainage, long& dColF_End_input, long& dColF_End_runoff, long& dColF_End_E,
+                            long& o, long& dColF_End_soilEvap, long& dColF_End_ET, long& dColF_End_ANet, long& dColF_CP_kplant, long& dColF_CP_kxylem,
+                            long& dColF_End_PLCplant, long& dColF_End_PLCxylem,
+                            bool& isNewYear, bool& useGSData, bool& mode_predawns, bool& rainEnabled, bool& ground, bool& gs_inGrowSeason,
+                            bool& gs_doneFirstDay) {
     double tempDouble = 0.0;
     drainage = 0;
     runoff = 0;
@@ -485,17 +491,17 @@ void soils::get_soilwetness(double& drainage, double& runoff, long& dd, bool& is
         }
     } //End if// //'dd>1 if
 
-    if (tod == 16 && !gs_doneFirstDay && gs_inGrowSeason && dSheet.Cells(rowD + dd - 3, colD + dColF_CP_kplant) > 0.000000001) { //if// //'get midday k//'s for day 1
+    if (tod == 16 && !gs_doneFirstDay && gs_inGrowSeason && dataCells[rowD + dd - 3][colD + dColF_CP_kplant] > 0.000000001) { //if// //'get midday k//'s for day 1
         // VPD zero case -- if the stomata did not open on the first day of the GS, kplant won't have been set and will be zero... in which case, try again tomorrow
         gs_doneFirstDay = true;
         sum = 0;
         for (z = 1; z <= 3; z++){//z = 1 To 3 
-            sum = sum + dSheet.Cells(rowD + dd - z, colD + dColF_CP_kplant);
+            sum = sum + dataCells[rowD + dd - z][colD + dColF_CP_kplant];
         } //for//z
         kpday1 = sum / 3.0; //'average midday kplant on day one
         sum = 0;
         for (z = 1; z <= 3; z++) {//z = 1 To 3
-            sum = sum + dSheet.Cells(rowD + dd - z, colD + dColF_CP_kxylem);
+            sum = sum + dataCells[rowD + dd - z][colD + dColF_CP_kxylem];
         } //for//z
         kxday1 = sum / 3.0; //'average midday kxylem on day one
 
@@ -506,10 +512,11 @@ void soils::get_soilwetness(double& drainage, double& runoff, long& dd, bool& is
         // [/HNT]
     } //End if// //'dd=16 if
     if (gs_doneFirstDay) { //if// //'calculate plc relative to midday of day 1
-        if (iter_refK < 0.000000001){// || iter_Counter == 0 // no longer appropriate to test for iter_Counter == 0 ... may be doing a seperate stress profile that refers to a saved refK, which will have been loaded at start of modelProgramMain
-            tempDouble = 100 * (1 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kplant) / kpday1); //' done to avoid repeating this calculation
+    if (iter_refK < 0.000000001){// || iter_Counter == 0 
+            // no longer appropriate to test for iter_Counter == 0 ... may be doing a seperate stress profile that refers to a saved refK, which will have been loaded at start of modelProgramMain
+            tempDouble = 100 * (1 - dataCells[rowD - 1 + dd][colD + dColF_CP_kplant] / kpday1); //' done to avoid repeating this calculation
         } else { // if we haven't loaded a ref K it will be set to zero, and we need to fall back to the old method.. otherwise use refK to calculate PLC
-            tempDouble = 100 * (1 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kplant) / iter_refK); // PLCp calculated from refK if it exists
+            tempDouble = 100 * (1 - dataCells[rowD - 1 + dd][colD + dColF_CP_kplant] / iter_refK); // PLCp calculated from refK if it exists
             if (tempDouble < 0.0){ // if we're using the refK, it's possible for this to be negative briefly -- should be considered zero
                 tempDouble = 0.0;
             }
@@ -518,6 +525,7 @@ void soils::get_soilwetness(double& drainage, double& runoff, long& dd, bool& is
         // no matter what, add it to the tally for calculating the mean over-season PLCp
         gs_ar_PLCSum[gs_yearIndex] = gs_ar_PLCSum[gs_yearIndex] + tempDouble; // yearly running total of PLC values
         gs_ar_PLCSum_N[gs_yearIndex] = gs_ar_PLCSum_N[gs_yearIndex] + 1; // total hours in GS
+        
         // now test for highest PLC and hours > 85
         if (tempDouble > gs_ar_PLCp[gs_yearIndex]){
             gs_ar_PLCp[gs_yearIndex] = tempDouble;
@@ -526,12 +534,11 @@ void soils::get_soilwetness(double& drainage, double& runoff, long& dd, bool& is
             gs_ar_PLC85[gs_yearIndex] = gs_ar_PLC85[gs_yearIndex] + 1;
         }
 
-        tempDouble = 100 * (1 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kxylem) / kxday1);
+        tempDouble = 100 * (1 - dataCells[rowD - 1 + dd][colD + dColF_CP_kxylem] / kxday1);
         dataCells[rowD + dd][colD + dColF_End_PLCxylem] = tempDouble; //'100 * (1 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kxylem) / kxday1) 'plc xylem...prior timestep
         if (tempDouble > gs_ar_PLCx[gs_yearIndex]){
             gs_ar_PLCx[gs_yearIndex] = tempDouble;
         }
-
         //dataCells[rowD + dd] colD + dColF_End_PLCplant) = (100.0 * (1.0 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kplant) / kpday1)); //'plc plant...prior timestep
         //dataCells[rowD + dd] colD + dColF_End_PLCxylem) = (100.0 * (1.0 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kxylem) / kxday1)); //'plc xylem...prior timestep
         // [HNT] keep track of in-season input

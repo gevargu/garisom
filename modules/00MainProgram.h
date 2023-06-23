@@ -1,26 +1,6 @@
 #ifndef MAINPROGRAM
 #define MAINPROGRAM
 
-#define FIO_PRECISION 12
-
-// For data inputs // these numbers are arbitrary for the most part, but ensure enough memory
-#define MAX_SUMMARY_COLS 121
-#define MAX_SUMMARY_ROWS 2001
-#define PARAMFILE_MAXROWS 101
-#define PARAMFILE_MAXCOLS 101
-#define DATAFILE_MAXROWS 2000001
-#define DATAFILE_MAXCOLS 101
-#define CONFIGFILE_MAXROWS 3
-#define CONFIGFILE_MAXCOLS 30
-
-// For staging the model
-#define STAGE_ID_NONE 0 // use this mode to skip all of the stage code and just run based on param sheet settings (a "normal" run, the default config)
-#define STAGE_ID_HIST_OPT 1
-#define STAGE_ID_HIST_STRESS 2
-#define STAGE_ID_FUT_OPT 3
-#define STAGE_ID_FUT_STRESS 4
-#define STAGE_ID_FUT_STRESS_NOACCLIM 5
-
 // Necessary cpp libraries
 #include <stdio.h>
 #include <iostream>
@@ -35,11 +15,13 @@
 #include <cstring>
 
 // GARISOM modules
+#include "01Macros.h"
 #include "01CSVRow.h" // to read rows from H. Todd
 #include "01IOHandler.h" // to manage inputs and outputs from H. Todd
 #include "02Soils.h" // module to perform soil calculations
 #include "03Hydraulics.h"// module to fit weibull functions for xylem resistance
 #include "04Morphology.h" // module to calculate root morphological traits
+#include "05CAssimilation.h"// module with carbon assimilation and irradiance functions
 #include "06MiscFunctions.h" // set of functions used to calculate parameter values at the beginning
 
 // Define classes
@@ -54,9 +36,9 @@ public:
     soils soilcalculator;
     hydraulics hydraulicscalculator;
     morphology morphologycalculator;
+    cassimilation photosyncalculator;
     MiscFunctions misc_functions;
 
-    
     // Variable declarations
     /* For reading data */
     double dummyDouble = 0.0;
@@ -117,6 +99,7 @@ public:
     int species_no;
     long iter_code; // used to override the normal iteration behavior if we want to walk back a half step
     long iter_Counter; //how many iterations of this data set have we run? For finding the supply curve
+    double iter_refK;
 
     /* Model parameter file */
     // Site Identifiers & Parameters
@@ -172,34 +155,30 @@ public:
     long yearVal; // the temporary variable where we hold the year read from the sheet
     long gs_ar_years[100], gs_ar_starts[100], gs_ar_ends[100], growSeasonCount;
     double gs_ar_Ca[100];
-    
-    // Variables used in Pcrit calculations
+    // used in Pcrit calculations
     std::string failspot, layerfailure[6];
     long failure, layer[6];
     double pcritrh[6], erh[6][100001], krh[6][100001];// rhizosphere
     double pcritr[6], kr[6][100001], er[6][100001],er_v[6][100001], kr_v[6][100001], tkr[6][100001], ter[6][100001];// roots
-    // stems
-    double pcrits, ksh, es[100001], es_v[100001], tes[100001];
-    // leaves
-    double pcritl, el[100001], el_v[100001], tel[100001];
-
+    double pcrits, ksh, es[100001], es_v[100001], tes[100001]; // stems
+    double pcritl, el[100001], el_v[100001], tel[100001]; // leaves
+    double pcritsystem;
     // Integration variables 
     long it, tnm, j, tmax;
     double del, eps, olds, p1, p2, e, s;
-
-    // Minimum conductivities
-    double kminroot[6], kminstem, kminleaf,kminplant;
+    // hydraulics
+    double kminroot[6], kminstem, kminleaf,kminplant,kpday1, kxday1;
     // soil variables
-    double drainage, gwflow, thetafc[6], thetafracres[6], thetafracfc[6],fc[6],ffc;
-
+    double drainage, gwflow, thetafc[6], thetafracres[6], thetafracfc[6],fc[6];
     // time-step counter
-    long dd, halt,haltsh;
+    long dd, halt,haltsh, o;
     double tod, timestep;
-    // required for soil wetness
-    double waterold, water[6], layerflow,elayer[6][100001],laisl,laish, soilredist[6], deficit, swclimit[6];
-    double rain, waternew, waterchange;
+    // soil wetness
+    double runoff, waterold, water[6], layerflow,elayer[6][100001],laisl,laish, soilredist[6], deficit, swclimit[6];
+    double rain, waternew, waterchange, soilevap;
     std::string night;
-
+    // photosynthesis
+    double transpirationtree, cinc, atree;
     /* Model outputs*/
     // time-step file columns
     long dColYear, dColDay, dColTime, dColSolar, dColWind, dColRain, dColTAir, dColTSoil, dColD;
@@ -233,6 +212,7 @@ public:
     void readPARSheet();                    // read the parameter file data
     void readGSSheet();                     // read growing season data and atm CO2 
     void readGrowSeasonData();              // extract cell values from growing season data and CO2
+    double getCarbonByYear(const long& yearNum, std::string GSCells[101][11], const long& maxYears);//
     void readDataSheet();                   // read climate forcing data
     void setConfig();                       // sets up model configuration
     void InitialConditions();               // sets up initial conditions (substitutes ReadIn() in V 1.0.0)
