@@ -491,7 +491,7 @@ void MainProgram::InitialConditions(){
             siteID = paramCells[sp+1][2];                                // site/simulation ID. Usually the plot/stand identifier  
             name_site = siteID;         
             lat = std::atof(paramCells[sp+1][3].c_str());                // latitude in degree fraction north
-            lon = std::atof(paramCells[sp+1][4].c_str());                // longitude in degree fraction west
+            longitude = std::atof(paramCells[sp+1][4].c_str());                // longitude in degree fraction west
             species = paramCells[sp+1][5];                               // species or PFT represented in parameter data
             name_species = species;                             
             alt = std::atof(paramCells[sp+1][6].c_str());                // site elevation in m above sea level
@@ -527,7 +527,8 @@ void MainProgram::InitialConditions(){
             lai = std::atof(paramCells[sp+1][22].c_str());               // canopy lai
             xh = std::atof(paramCells[sp+1][23].c_str());                // height above soil surface for understory wind and gh in m
             height = std::atof(paramCells[sp+1][24].c_str());            // average tree height in m
-            
+            pgrav = height * 0.01;                                       // pressure drop from gravity in MPa
+
             // Tree-level Parameters
             aspect = std::atof(paramCells[sp+1][25].c_str());            // max radius of root system per max depth
             root_depth = std::atof(paramCells[sp+1][26].c_str());        // maximum rooting depth in m
@@ -538,6 +539,7 @@ void MainProgram::InitialConditions(){
             // Hydraulics
             leafpercent = std::atof(paramCells[sp+1][30].c_str());       // saturated % of tree resistance in leaves
             ksatp = std::atof(paramCells[sp+1][31].c_str());             // kmax of tree in kg hr-1 m-2 MPa-1 per basal area
+            einc = ksatp / 500.0;                                        // e increment in kg hr-1 m-2 basal area for composite curve
             root_p12 = std::atof(paramCells[sp+1][32].c_str());          // root element p12
             root_p50 = std::atof(paramCells[sp+1][33].c_str());          // root element p50
             stem_p12 = std::atof(paramCells[sp+1][34].c_str());          // stem p12
@@ -969,7 +971,7 @@ void MainProgram::componentpcrits(){ //'gets pcrits
 /* Time step iterator function */
 long MainProgram::modelTimestepIter(long& VBA_dd) {
     dd = VBA_dd;
-    
+        
     if (dd == 1 || isNewYear) {
         failure = 0;//'=1 for system failure at midday...terminates run
         failspot = "no failure";
@@ -1032,23 +1034,21 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
         }
     }
 
-    if (dd == 0){
-        double caDefault = std::atof(GSCells[1][4].c_str());
-        std::cout << "WARNING: Initial CO2 for day 0: " << caDefault << std::endl;
-        ca = caDefault * 0.000001;
-    }
-    
     if ( dd == 1 || isNewYear){
+        // Get CO2 for current year
         ca = getCarbonByYear(yearVal,GSCells,maxYears); // get current year atmospheric CO2
         std::cout << " Atmospheric CO2 concentration for " << yearVal << ": " << ca << std::endl;
         ca = ca * 0.000001;
     }
 
+    // if (dd == 0){
+    //     double caDefault = std::atof(GSCells[2][4].c_str());
+    //     std::cout << "WARNING: Initial CO2 for day 0: " << caDefault << std::endl;
+    //     ca = caDefault * 0.000001;
+    // }
+
     jd = dataCells[rowD + dd][colD + dColDay]; // julian day
-    //jd = dSheet.Cells(rowD + dd, colD + dColDay); //'julian day
-
     //Debug.Print "DOING A LOOP-1 " & dd
-
     if (dd > 1 && !isNewYear) { //if// //'set timestep
         if (tod < dataCells[rowD + dd][colD + dColTime]) { //if// //'same old day getting older
             timestep = dataCells[rowD + dd][colD + dColTime] - tod;
@@ -1101,70 +1101,91 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
                                     dColF_End_runoff, dColF_End_E, o, dColF_End_soilEvap, dColF_End_ET, dColF_End_ANet, dColF_CP_kplant,
                                     dColF_CP_kxylem, dColF_End_PLCplant, dColF_End_PLCxylem,
                                     isNewYear, useGSData, mode_predawns, rainEnabled, ground, gs_inGrowSeason, gs_doneFirstDay); 
-    // solarcalc(); //'get radiation for timestep
-    // if (qsl > lightcomp /*[HNT] multiyear*/ && gs_inGrowSeason /*[/HNT]*/) { //if//
-    //     night = "n"; //'it//'s light enough for sun layer to do business
-    // } else {
-    //     night = "y"; //'too dark
-    // } //End if// //'end night if
+    //'get radiation for timestep
+    photosyncalculator.get_solarcalc(fet, et, sm, longitude, tsn, pi, tsncorr, sindec,  dec, cosdec, tim, tod, coszen, lat,  zen,
+                                        cosaz, az, patm, m, solar, tau, sp, sb, sd, st, cloud, obssolar, fcd, xang, kbe, kbezero,
+                                        mleafang, rad, sum, k1, t1, lai, told, t2, kd, qd, qds, abspar, qdt, qb, qbt, qsc, qsh, qsl,
+                                        laisl, laish, parsh, parsl, parbottom, absnir, nirsh, nirsl, sshade, ssun, sbottom, ssunb, 
+                                        ssund, sref, absolar, par, ppfd, ea, eac, la, lg, vpd, airtemp, maxvpd, sbc, jd);
+    // night yet?
+    if (qsl > lightcomp /*[HNT] multiyear*/ && gs_inGrowSeason) {
+        night = "n"; //'it//'s light enough for sun layer to do business
+    } else {
+        night = "y"; //'too dark
+    } //End if// //'end night if
 
-    // gwflow = 0; //'re-set inflow to bottom of root zone
-    // drainage = 0; //'re-set drainage from bottom of root zone
-    //                 //'Call getpredawns //'update soil pressure of each layer
-    //                 //'if failure = 1 { //if// Exit do
-    // chalk = 0; //'einc counter
+    gwflow = 0; //'re-set inflow to bottom of root zone
+    drainage = 0; //'re-set drainage from bottom of root zone
+    //'Call getpredawns //'update soil pressure of each layer
+    //'if failure = 1 { //if// Exit do
+    chalk = 0; //'einc counter
 
-    // twentyMarker:
+    twentyMarker:
 
-    // getpredawns(); //'passed initializing...update soil pressure of each layer
+    //'passed initializing...update soil pressure of each layer
+    soilcalculator.get_predawns(k,layer,z,rowD,colD,dd,dColRain,t,failure,dColF_p1,o,layers,layerfailure,
+                                failspot,mode_predawns,kminroot,theta,water,x,depth,pgrav,thetasat,
+                                dataCells,pd,a,n,prh,pcritrh,pcritr,sum,pr,prinitial);
 
-    // if (failure == 1){
-    //     return -1;//break;//Exit do
-    // }
+    if (failure == 1){
+        std::cout << "WARNING: Unrecoverable model failure!" << std::endl;
+        std::cout << "SOURCE: Errors when calculating soil pressures" << std::endl;
+        std::cout << "ACTION: Model stops " << std::endl;
+        std::cout << std::endl;
+        return -1;//break;//Exit do
+    }
 
-    // test = 0; //'=1 if stem or leaf fails
-    // p = -1; //'E(Pleaf) point counter
-    //           //'set initial guesses of the three unknowns
-    // e = -einc; //'total e: einc and e are still in kg hr-1 m-2 basal area, as are conductances
-    //              //'Range("c18:i10000").ClearContents
-    // psynmax = -100;
-    // psynmaxsh = -100;
-    // skip = 0; //'this turns off psynthesis
+    test = 0; //'=1 if stem or leaf fails
+    p = -1; //'E(Pleaf) point counter
+    //'set initial guesses of the three unknowns
+    e = -einc; //'total e: einc and e are still in kg hr-1 m-2 basal area, as are conductances
+    //'Range("c18:i10000").ClearContents
+    psynmax = -100;
+    psynmaxsh = -100;
+    skip = 0; //'this turns off psynthesis
 
-    // do{ //'this loop obtains and stores the entire composite curve
-    //     p = p + 1;
-    //     e = e + einc;
-    //     newtonrhapson(); //'solves for p//'s and e//'s in fingers of chicken foot
-    //                       //'if check >= 400 { //if// GoTo 60: //'NR can//'t find a solution
-    //     if (check > 500) { //if//
-    //         break;//Exit do
-    //     } //End if// //'test for total failure
+    do{//'this loop obtains and stores the entire composite curve
+        p = p + 1;
+        e = e + einc;
+        //'solves for p//'s and e//'s in fingers of chicken foot
+        hydraulicscalculator.newtonrhapson(kminroot, pr, pd, prh,jmatrix,frt, dfrdpr, pcritrh, p1, p2, plow, pinc,
+            elow,erh, klow,krh,ehigh, khigh, estart, klower,efinish, kupper, flow,
+            func, dfrhdprh,pcritr,er,kr,dfrhdpr,dfrdprh, e, sum, threshold,
+            initialthreshold, aamax, vv, dum, indx, pcrits, waterold,
+            gs_ar_nrFailConverge, gs_ar_nrFailConverge_Water, gs_ar_nrFailConverge_WaterMax,
+            weird,check,layer,k,ticks,unknowns,d,imax,ii,ll,gs_yearIndex,dd,
+            layers,layerfailure,failspot);
+        //'if check >= 400 { //if// GoTo 60: //'NR can//'t find a solution
+        if (check > 500){ //if//
+            break;//Exit do
+        } //End if// //'test for total failure
         
-    //     sum = 0;
-    //     for (k = 1; k <= layers; k++) {//k = 1 To layers
-    //         sum = sum + layer[k];
-    //     } //end for k
+        sum = 0;
+        for (k = 1; k <= layers; k++) {//k = 1 To layers
+            sum = sum + layer[k];
+        } //end for k
         
-    //     if (sum == layers) { //if//
-    //         failspot = "below ground"; //'total failure below ground
-    //         break;//Exit do
-    //     } //End if//
+        if (sum == layers) { //if//
+            failspot = "below ground"; //'total failure below ground
+            break;//Exit do
+        } //End if//
         
-    //     stem(); //'gets stem and leaf pressures
-    //     leaf();
+        hydraulicscalculator.get_stem(p1,pr,pgrav,plow,pinc,es,elow,ehigh,estart,efinish,
+            e,p2,ps,pcrits,k,test,failspot); //'gets stem and leaf pressures
+        hydraulicscalculator.get_leaf(p1,ps,pgrav,plow,pinc,el,elow,ehigh,estart,efinish,
+            e,p2,pl,pcritl,k,test,failspot);
         
-    //     if (test == 1) {
-    //         break;//Exit do
-    //     } 
+        if (test == 1) {
+            break;//Exit do
+        } 
         
-    //     compositecurve(); //'stores the entire composite curve
-    //     //'if skip = 0 { //if//
-    //     leaftemps(); //'gets sun layer leaf temperature from energy balance
-    //     leaftempsshade(); //'gets shade layer leaf temperature
-    //     assimilation(); //'gets sun layer photosynthesis
-    //     assimilationshade(); //'gets shade layer photosynthesis
-
-    // } while (!(sum == layers || test == 1 || night == "y" && (dd > 1 && !isNewYear) || check >= 500)); //'loop to complete failure unless it//'s night
+        //compositecurve(); //'stores the entire composite curve
+        //'if skip = 0 { //if//
+        //leaftemps(); //'gets sun layer leaf temperature from energy balance
+        //leaftempsshade(); //'gets shade layer leaf temperature
+        //assimilation(); //'gets sun layer photosynthesis
+        //assimilationshade(); //'gets shade layer photosynthesis
+    } while (!(sum == layers || test == 1 || night == "y" && (dd > 1 && !isNewYear) || check >= 500)); //'loop to complete failure unless it//'s night
 
     // if (chalk > 0) { //if//
     //     weird = 0; //'done our best
@@ -1379,7 +1400,7 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
 /* Running the model */ 
 long MainProgram::Rungarisom(){
     std::cout << " ---------------------------------------------" << endl;
-    std::cout << "|  CARBON GAIN VS HYDRAULIC RISK MODEL V 1.0  |" << endl;
+    std::cout << "|  CARBON GAIN VS HYDRAULIC RISK MODEL V 2.0  |" << endl;
     std::cout << " ---------------------------------------------" << endl;
     std::cout << endl;
 
@@ -1425,7 +1446,7 @@ long MainProgram::Rungarisom(){
     MainProgram::readGSSheet();
     MainProgram::readGrowSeasonData();
     std::cout << endl;  
-    std::cout << "- Climate forcing data: " << endl;
+    std::cout << "- Climate Forcing Data: " << endl;
     MainProgram::readDataSheet();
     std::cout << endl;
     std::cout << " ---------------------------------------------" << endl;
@@ -1511,13 +1532,27 @@ long MainProgram::Rungarisom(){
         dd = dd + 1;
         successCode = modelTimestepIter(dd);
 
+        if(successCode == 0){
+            std::cout << "Unrecoverable model failure!" << std::endl;
+            std::cout << "Model stops " << std::endl;
+            std::cout << std::endl;
+            return 0; // failure, unrecoverable
+        } else if (successCode > 0) {
+            dd = dd - 1; //we need to repeat this timestep because we bailed early when finding a new year
+            gs_yearIndex = successCode;
+
+            /* if we're running without growing season limits, we need to record the "end of GS" water content now
+            because we did not complete the previous timestep, back up 1 more to grab a value */
+            
+        }
+
     } while (!(dataCells[rowD + 1 + dd][colD + dColDay] < 0.01));
-    
+    std::cout << "              2010 CO2 atm: " << GSCells[2][4] << std::endl;
+    std::cout << std::endl;
     std::cout << "       Roots Pcrit layer 1: " << pcritr[1] << std::endl;
     std::cout << std::endl;
     std::cout << "                Stem Pcrit: " << pcrits << std::endl;
     std::cout << std::endl;
     std::cout << "                Leaf Pcrit: " << pcritl << std::endl;
     std::cout << std::endl;
-
 }

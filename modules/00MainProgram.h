@@ -104,7 +104,7 @@ public:
     /* Model parameter file */
     // Site Identifiers & Parameters
     std::string region, siteID, species;
-    double lat, lon, alt, slope, slope_asp;
+    double lat, longitude, alt, slope, slope_asp;
     // Sky Parameters
     double tau, tsncorr, emiss, ca;
     // Soils Parameters
@@ -112,11 +112,11 @@ public:
     int layers;
     double rockfrac, rhizopercent, ffc, fieldcapfrac,soilabssol, rough, zdispl, zh, pground,grounddistance;
     // Stand-level Parameters
-    double baperga, lai, xh, height;
+    double baperga, lai, xh, height, pgrav;
     // Tree-level Parameters
     double aspect, root_depth, xang, laperba, leafwidth;
     // Hydraulics
-    double leafpercent , ksatp, root_p12, root_p50, stem_p12, stem_p50, leaf_p12, leaf_p50;
+    double leafpercent , ksatp, root_p12, root_p50, stem_p12, stem_p50, leaf_p12, leaf_p50, einc;
     // Carbon Assimilation
     double vmax25, jmax25, lightcomp, qmax, kc25, ko25, comp25, thetac, havmax, hdvmax, svvmax, hajmax, hdjmax, svjmax, lightcurv;
     // BAGA Optimization
@@ -135,7 +135,7 @@ public:
     std::vector <double> vgparams;
     // For hydraulics parameterization
     double rootpercent, stempercent, root_c, root_b, stem_c, stem_b, leaf_c, leaf_b, kmin;
-    double x, rootr, stemr, leafr, plantr, ksatl, lsc, rsatp, ksats, ksatr[6], ksatroot, test;
+    double x, rootr, stemr, leafr, plantr, ksatl, lsc, rsatp, ksats, ksatr[6], ksatroot;
     double rstem, rleaf, rplant, rhizor, kinc, kmaxr[6], kmaxrh[6], rrhizofrac;
     // Carbon Assimilation
     // Morphological traits
@@ -163,36 +163,45 @@ public:
     double pcrits, ksh, es[100001], es_v[100001], tes[100001]; // stems
     double pcritl, el[100001], el_v[100001], tel[100001]; // leaves
     double pcritsystem;
-    // Integration variables 
+    // E(P) curves Integration variables 
     long it, tnm, j, tmax;
     double del, eps, olds, p1, p2, e, s;
     // hydraulics
     double kminroot[6], kminstem, kminleaf,kminplant,kpday1, kxday1;
     // soil variables
-    double drainage, gwflow, thetafc[6], thetafracres[6], thetafracfc[6],fc[6];
+    double drainage, gwflow, thetafc[6], thetafracres[6], thetafracfc[6],fc[6], theta, pd[6],prh[6], pr,
+            runoff, waterold, water[6], layerflow,elayer[6][100001],laisl,laish, soilredist[6], deficit,
+            swclimit[6], rain, waternew, waterchange, soilevap, transpirationtree, cinc, atree, prinitial;
     // time-step counter
-    long dd, halt,haltsh, o;
-    double tod, timestep;
-    // soil wetness
-    double runoff, waterold, water[6], layerflow,elayer[6][100001],laisl,laish, soilredist[6], deficit, swclimit[6];
-    double rain, waternew, waterchange, soilevap;
+    long dd, halt,haltsh, o, chalk, p, skip, check, d;
+    double tod, timestep, psynmax, psynmaxsh;
+    // solar calculations
     std::string night;
+    double fet, et, sm, tsn, sindec, dec, cosdec, tim, coszen, zen, cosaz,
+        az, m, sp, sb, sd, st, cloud, fcd, kbe, kbezero, mleafang,
+        rad, k1, t1, told, t2, kd, qd, qds, qdt, qb, qbt, qsc, qsh, qsl,
+        parsh, parsl, parbottom, nirsh, nirsl, sshade, ssun, sbottom, ssunb,
+        ssund, sref, par, ppfd, ea, eac, la, lg;
+    // rhizosphere, root, stem and leaves flow/pressures
+    double plow, elow, ehigh, klow, khigh, estart, klower, efinish, kupper, flow,
+        aamax, jmatrix[7][7],vv[7], dum, indx[7], func[7], frt, dfrdpr, dfrhdprh[7],
+        dfrdprh[7], dfrhdpr[7], threshold, initialthreshold, ps, pl;
+    long imax, ii, ll, weird, ticks, test;
     // photosynthesis
-    double transpirationtree, cinc, atree;
+    //double ;
     /* Model outputs*/
     // time-step file columns
     long dColYear, dColDay, dColTime, dColSolar, dColWind, dColRain, dColTAir, dColTSoil, dColD;
     //Data column positions - NOTE THAT THEY ARE OFFSET FROM colD, the starting data column (to avoid wasting io array space)
-    long dColF_p1, dColF_p2, dColF_p3, dColF_p4, dColF_p5, dColF_predawn, dColF_P, dColF_E, dColF_Gw, dColF_laVPD, dColF_leaftemp, dColF_ANet,
-    dColF_s1m2, dColF_ci, dColF_PPFD, dColF_S_P, dColF_S_E, dColF_S_Gw, dColF_S_laVPD, dColF_S_leaftemp,
-    dColF_S_Anet, dColF_S_s1m2, dColF_S_ci, dColF_S_PPFD;
-    long dColF_T_E, dColF_T_ANet, dColF_T_s1m2,
-    dColF_T_pcrit, dColF_T_Ecrit, dColF_CP_Pstem, dColF_CP_Proot, dColF_CP_kstem, dColF_CP_kleaf, dColF_CP_kplant,
-    dColF_CP_kxylem, dColF_CP_kroot1, dColF_CP_kroot2, dColF_CP_kroot3, dColF_CP_kroot4, dColF_CP_kroot5, dColF_CP_krootAll,
-    dColF_CP_Eroot1, dColF_CP_Eroot2, dColF_CP_Eroot3, dColF_CP_Eroot4, dColF_CP_Eroot5, dColF_CP_Empty1, dColF_CP_Empty2,
-    dColF_End_watercontent, dColF_End_waterchange, dColF_End_rain, dColF_End_gwater, dColF_End_E, dColF_End_drainage,
-    dColF_End_soilEvap, dColF_End_ET, dColF_End_ANet, dColF_End_input, dColF_End_PLCplant, dColF_End_PLCxylem,
-    dColF_End_runoff;
+    long dColF_p1, dColF_p2, dColF_p3, dColF_p4, dColF_p5, dColF_predawn, dColF_P, dColF_E, dColF_Gw, dColF_laVPD,
+        dColF_leaftemp, dColF_ANet, dColF_s1m2, dColF_ci, dColF_PPFD, dColF_S_P, dColF_S_E, dColF_S_Gw, dColF_S_laVPD, 
+        dColF_S_leaftemp, dColF_S_Anet, dColF_S_s1m2, dColF_S_ci, dColF_S_PPFD, dColF_T_E, dColF_T_ANet, dColF_T_s1m2,
+        dColF_T_pcrit, dColF_T_Ecrit, dColF_CP_Pstem, dColF_CP_Proot, dColF_CP_kstem, dColF_CP_kleaf, dColF_CP_kplant,
+        dColF_CP_kxylem, dColF_CP_kroot1, dColF_CP_kroot2, dColF_CP_kroot3, dColF_CP_kroot4, dColF_CP_kroot5, dColF_CP_krootAll,
+        dColF_CP_Eroot1, dColF_CP_Eroot2, dColF_CP_Eroot3, dColF_CP_Eroot4, dColF_CP_Eroot5, dColF_CP_Empty1, dColF_CP_Empty2,
+        dColF_End_watercontent, dColF_End_waterchange, dColF_End_rain, dColF_End_gwater, dColF_End_E, dColF_End_drainage,
+        dColF_End_soilEvap, dColF_End_ET, dColF_End_ANet, dColF_End_input, dColF_End_PLCplant, dColF_End_PLCxylem,
+        dColF_End_runoff;
     
     // summary file columns
     long dColF_GS_year, dColF_GS_input, dColF_GS_Anet, dColF_GS_E, dColF_GS_PLCp, dColF_GS_PLCx, dColF_GS_kPlant, dColF_GS_kXylem, dColF_GS_ET;

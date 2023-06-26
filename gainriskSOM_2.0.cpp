@@ -26,6 +26,7 @@
             01: Input management functions 
                 01CSVROW (h)
                 01IOHandler (h/cpp)
+                01Macros (h)
             02: Soil hydrodynamics module
                 02Soils (h/cpp)
             03: Plant hydraulics module
@@ -40,7 +41,7 @@
 ### Model outputs:
 
 ### Notes on recent updates:
-    1. This version is a modular program that facilitates modifications, troubleshooting, and additions to the model.
+    1. This version is a modular program that facilitates troubleshooting and additions to the model.
     2. Estimation of weibull parameters via p12 and p50, which facilitates data acquisition.
     3. Also includes a cavitation fatigue module to re-calculate the weibull function while accounting for previous year damage to the xylem.
     4. It accounts for increases in atmospheric CO2 due to climate change.
@@ -50,7 +51,6 @@
 ### Notes on future updates:
     1. Addition of a data assimilation routine to facilitate iterative forecasting. Will do using PEcAn.
     2. Addition of a hydrological competition module to quantify the effects of multiple species on the water budget.
-
 */ 
 //
 // Load the necessary libraries
@@ -71,13 +71,13 @@
 
 /* GARISOM modules
     - Each module has a set of functions.
-    - All functions should be declared in the main header hile: "MainProgram.h".
     - If editing please study the documentation associated with each module.
-    - Add new functions as modules.
+    - Add new functions as part of existing modules or create new ones.
 */ 
 #include "modules/00MainProgram.h" // Main functions to run garisom
 #include "modules/01CSVRow.h" // to read rows (H. Todd)
 #include "modules/01IOHandler.h"// to reference array cells (H. Todd)
+#include "modules/01Macros.h"
 #include "modules/02Soils.h" // module to perform soil calculations
 #include "modules/03Hydraulics.h"// module to fit weibull functions for xylem resistance
 #include "modules/04Morphology.h" // module to calculate root morphological traits
@@ -92,6 +92,7 @@ int main() {
     srand((unsigned)(time(0) * time(0)));
     // set the cout decimal precision
     std::cout.precision(12);
+    std::cout << std::endl;
 
     garisom.stageNames[STAGE_ID_NONE] = "standard"; //stage IDs and names are related to various modes the model was designed to run in for specific projects -- that code has been removed, but a few vestiges remain
 
@@ -105,9 +106,11 @@ int main() {
    // Model finalization
 	if (!result) {
         std::cout << "Model Failure! Stage " << garisom.stage_ID << std::endl;
+        std::cout << std::endl;
         return 0;
     } else {
         std::cout << "Model Success! Stage " << garisom.stage_ID << std::endl;
+        std::cout << std::endl;
     }
     return 1;
 }

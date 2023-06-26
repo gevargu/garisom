@@ -17,5 +17,6 @@ garisom: gainriskSOM_2.0.cpp
 	modules/02Soils.cpp \
 	modules/03Hydraulics.cpp \
 	modules/04Morphology.cpp \
+	modules/05CAssimilation.cpp	\
 	modules/06MiscFunctions.cpp \
 	-o garisom

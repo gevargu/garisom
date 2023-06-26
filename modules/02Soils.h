@@ -24,7 +24,7 @@ public:
     double get_vgp(double* a, double* n,const double& x,const long& z);
     double get_vgterm(double* n,const double& vp,const long& z);
     double get_vg(double* a, double* n, const double& x,double* kmaxrh,const long& z);
-    // Soil water status
+    // Soil water status & water potential
     double get_rvg(double* a, double* n, const double& x, const long& z);
     double get_swc(double* a, double* n, const double& x, const long& z);
     void get_soilwetness(double& drainage, double& runoff, double& waterold, double& x, double* thetafracres, double* thetafracfc, double* a,
@@ -45,6 +45,11 @@ public:
                             long& dColF_End_PLCplant, long& dColF_End_PLCxylem,
                             bool& isNewYear, bool& useGSData, bool& mode_predawns, bool& rainEnabled, bool& ground, bool& gs_inGrowSeason,
                             bool& gs_doneFirstDay);
+    void get_predawns(long& k, long* layer, long& z, long& rowD, long& colD, long& dd, long& dColRain, long& t, long& failure, long& dColF_p1, long& o,
+                            int& layers, std::string* layerfailure, std::string& failspot,bool& mode_predawns,
+                            double* kminroot, double& theta, double* water, double& x, double* depth, double& pgrav,
+                            double* thetasat, double dataCells[2000001][101], double* pd, double* a, double* n,
+                            double* prh, double* pcritrh, double* pcritr, double& sum, double& pr, double& prinitial);
     // Van Genuchten Integration
     void trapzdvg(const long& t,double* a, double* n, double* kmaxrh,const long& z, double& p1, double& p2, double& s, long& it, long& tnm, double& del, double& x, double& sum);
     void qtrapvg(double& olds, long& t,double* a, double* n, double* kmaxrh,const long& z, double& p1, double& p2, double& s, long& it, long& tnm, double& del, double& x, double& sum);

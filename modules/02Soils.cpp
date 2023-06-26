@@ -561,3 +561,81 @@ void soils::get_soilwetness(double& drainage, double& runoff, double& waterold, 
         gs_ar_waterInput_OFF[gs_yearIndex] += dataCells[rowD + dd][colD + dColF_End_input];
     }
 }
+
+/* Pre-Dawn Water Potential*/
+void soils::get_predawns(long& k, long* layer, long& z, long& rowD, long& colD, long& dd, long& dColRain, long& t, long& failure, long& dColF_p1, long& o,
+                            int& layers, std::string* layerfailure, std::string& failspot,bool& mode_predawns,
+                            double* kminroot, double& theta, double* water, double& x, double* depth, double& pgrav,
+                            double* thetasat, double dataCells[2000001][101], double* pd, double* a, double* n,
+                            double* prh, double* pcritrh, double* pcritr, double& sum, double& pr, double& prinitial) {
+   
+    //'first check for layer participation...only rooted layers, not layer 0
+    for (k = 1; k <= layers; k++){//k = 1 To layers //'assign source pressures, set layer participation
+        if (layerfailure[k] == "root") { //if//
+            if (kminroot[k] == 0){
+                layer[k] = 1; //'gone from scene if roots cavitated at midday
+            }
+            if (kminroot[k] != 0) { //if// //'roots still around
+                layerfailure[k] = "ok";
+                layer[k] = 0;
+            } //End if//
+        } //End if//
+        if (layerfailure[k] == "rhizosphere"){
+            layer[k] = 0; //'layer can come back to life
+        }
+    } //for//k
+   
+    //'after getting water[z] and layer participation, get predawns
+    for (z = 0; z <= layers; z++){//z = 0 To layers
+        if (layer[z] == 0) { //if//
+            theta = water[z] / depth[z]; //'convert m3 water per m2 ground back to m3 water / m3 soil
+            x = theta / thetasat[z]; //'remember, VG function takes theta/thetasat as input
+            //predawns mode
+            if (mode_predawns){
+                pd[z] = dataCells[rowD + dd][colD + dColRain] - pgrav;
+                //pd[z] = dSheet.Cells(rowD + dd, colD + dColRain) - pgrav; // read the predawns+pgrav from the "rain" column
+            } else {
+                pd[z] = get_rvg(a,n,x,z); //'soil pressure of layer
+            }//end predawns mode changes
+            prh[z] = pd[z]; //'guess for NR solution
+            if (pd[z] >= pcritrh[z] && z > 0) { //if// //'only rooted layers // [HNT] >= instead of > for consistency w/ Newton Rhapson update
+                layer[z] = 1;
+                layerfailure[z] = "rhizosphere";
+            } //End if//
+            if (pd[z] >= pcritr[z] && z > 0) { //if// //'only rooted layers // [HNT] >= instead of > for consistency w/ Newton Rhapson update
+                layer[z] = 1;
+                layerfailure[z] = "root";
+                kminroot[z] = 0;
+            } //End if//
+        } else { //'layer//'s disconnected
+            pd[z] = pcritr[z];
+            prh[z] = pcritr[z];
+        } //End if//
+    } //for//z
+
+    //'now get guess of proot
+    sum = 0;
+    t = 0;
+   
+    for (k = 1; k <= layers; k++){ //k = 1 To layers
+        if (layer[k] == 0) { //if//
+            sum = sum + pd[k];
+        } else { //'predawn is not seen by the roots
+            t = t + 1;
+        } //End if//
+    } //for//k
+
+    failspot = "no failure";
+   
+    if (t < layers) { //if//
+        pr = sum / (layers - t); //'set unknown proot to average pd
+        prinitial = pr; //'store initial value if NR gets off the rails
+    } else {
+        failure = 1;
+    } //End if//
+   
+    for (z = 1; z <= layers; z++){//z = 1 To layers
+        dataCells[rowD + dd][colD + dColF_p1 - 1 + o + z] = pd[z]; //'soil pressures by layer (only for rooted layers)
+    } //for//z
+    //'Cells(16 + dd, 65) = pd(0) //'water potential of top layer
+}

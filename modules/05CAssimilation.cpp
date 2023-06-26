@@ -2,30 +2,37 @@
 
 /* Solar irradiance function*/
 //'gets radiative terms for energy balance and assimilation
-void cassimilation::get_solarcalc() {
-    //'j = Cells(14 + i, 3) //'julian day
+void cassimilation::get_solarcalc(double& fet, double& et, double& sm, const double& longitude, double& tsn,
+                                  const double& pi, double& tsncorr, double& sindec, double& dec, double& cosdec,
+                                  double& tim, double& tod, double& coszen, const double& lat, double& zen,
+                                  double& cosaz, double& az, double& patm, double& m, const double& solar,
+                                  double& tau, double& sp, double& sb, double& sd, double& st, double& cloud,
+                                  double& obssolar, double& fcd, const double& xang, double& kbe, double& kbezero,
+                                  double& mleafang, double& rad, double& sum, double& k1, double& t1, double& lai,
+                                  double& told, double& t2, double& kd, double& qd, double& qds, const double& abspar,
+                                  double& qdt, double& qb, double& qbt, double& qsc, double& qsh, double& qsl,
+                                  double& laisl, double& laish, double& parsh, double& parsl, double& parbottom,
+                                  const double& absnir, double& nirsh, double& nirsl, double& sshade, double& ssun,
+                                  double& sbottom, double& ssunb, double& ssund, double& sref, const double& absolar,
+                                  double& par, double& ppfd, double& ea, double& eac, double& la, double& lg,
+                                  double& vpd, double& airtemp, double& maxvpd, const double& sbc,
+                                  long& jd) {
     fet = 279.575 + 0.9856 * jd; //'jd is julian day, fet is factor for CN eqn 11.4
     fet = fet * pi / 180.0; //'convert to radians
     et = (-104.7 * sin(fet) + 596.2 * sin(2 * fet) + 4.3 * sin(3 * fet) - 12.7 * sin(4 * fet) - 429.3 * cos(fet) - 2 * cos(2 * fet) + 19.3 * cos(3 * fet)) / 3600.0; //'"equation of time" in fraction of HOURS C&N 11.4
-                                                                                                                                                                       //'long = Cells(11, 4) //'longitude in degree fraction W
     sm = 15 * int(longitude / 15.0); //'standard meridian east of longitude
     //'lc = 0.0666667 * (sm - longitude) //'CN 11.3 for longitude correction in fraction of hours
     tsn = 12 - tsncorr - et; //'time of solar noon in hour fraction from midnight, CN 11.3
-    //'Cells(14 + i, 5) = tsn //'output solar noon
     sindec = pi / 180.0 * (356.6 + 0.9856 * jd);
     sindec = sin(sindec);
     sindec = pi / 180.0 * (278.97 + 0.9856 * jd + 1.9165 * sindec);
     sindec = 0.39785 * sin(sindec); //'sine of the angle of solar declination
-    //'lat = Cells(10, 4) //'latitude, fraction of degrees N
     dec = atan(sindec / pow((-sindec * sindec + 1), 0.5)); //'arcsin of sindec in radians, dec is solar declination
-    //'Cells(14 + i, 6) = dec * 180 / pi //'output solar declination
     cosdec = cos(dec);
-    //'timst = Cells(14 + i, 4) //'local standard time, hour fraction from midnight
     tim = 15 * (tod - tsn);
     tim = pi / 180.0 * tim; //'convert to radians
     coszen = sin(lat) * sindec + cos(lat) * cosdec * cos(tim); //'cos of zenith angle of sun from overhead, CN11.1
     zen = atan(-coszen / pow((-coszen * coszen + 1), 0.5)) + 2 * atan(1); //'zenith in radians
-    //'if zen < 1.57 { Cells(14 + i, 7) = zen * 180 / pi //'output when sun//'s up (zen<90)
     cosaz = -(sindec - cos(zen) * sin(lat)) / (cos(lat) * sin(zen)); //'cos of azimuth angle measured counterclockwize from due south CN 11.5
     if (cosaz < -1){
         cosaz = -1; //'keep it in limits
@@ -47,28 +54,17 @@ void cassimilation::get_solarcalc() {
     if (tod > tsn){//'correct for afternoon hours!
         az = 6.28319 - az;
     }
-    //'if zen < 1.57 { Cells(14 + i, 8) = az * 180 / pi//'output azimuth during day
     //'dayl = (-Sin(lat) * sindec) / (Cos(lat) * Cos(dec))
     //'dayl = Atn(-dayl / Sqr(-dayl * dayl + 1)) + 2 * Atn(1)
     //'dayl = 2 * dayl / 15
-    //'Cells(14 + i, 9) = dayl * 180 / pi
-    
     if (zen * 180 / pi < 90) { //'sun//'s up: calculate solar radiation
-        //'pa = Cells(12, 4) //'atmospheric p in kpa
-        //'Cells(16 + dd, 8) = zen * 180 / pi //'zenith angle in degrees
-        //'Cells(16 + dd, 9) = lat
         //'night = "n" //'its officially day
         m = patm / (101.3 * cos(zen)); //'CN 11.12
-        //'spo = Cells(9, 4) //'solar constant
-        //'tau = Cells(8, 4) //'transmittance, CN 11.11
         sp = solar * pow(tau, m); //'direct beam irradiance Wm-2
         sb = sp * cos(zen); //'direct beam irradiance on horizontal surface
-        //'Cells(14 + i, 11) = sb
         sd = 0.3 * (1 - pow(tau, m)) * solar * cos(zen); //'clear sky diffuse radiation
-        //'Cells(14 + i, 12) = sd
         st = sd + sb; //'total horizontal irradiance from sun (w/o reflected radiation)
         cloud = solar * pow(0.4, m) * cos(zen); //'overcast threshold
-        //'stobs = Cells(13, 4) //'observed solar radiation on the horizontal Wm-2
         if (obssolar > 0) { //'we//'ve got solar data
             if (obssolar < st) { //'we//'ve got clouds
                 if (obssolar > cloud) { //'we//'ve got partial clouds
@@ -85,7 +81,6 @@ void cassimilation::get_solarcalc() {
             } //Endif// //'if no clouds, everything//'s already set
         } //Endif// //'if no solar data, we assume no clouds
         //'calculate reflected light as if it is equal to light at bottom of canopy
-        //'xang = Cells(12, 11) //'leaf angle parameter, CN 15.4
         //'if zen < 1.57 { //'sun//'s up:
         double evenMoreTest = tan(zen);
         evenMoreTest = pow((tan(zen)), 2.0);
@@ -97,13 +92,7 @@ void cassimilation::get_solarcalc() {
                                                                                                                  //kbe = Sqr(xang ^ 2 + (Tan(zen)) ^ 2) / (xang + 1.774 * (xang + 1.182) ^ -0.733) 'beam extinction coefficient CN 15.4
         kbezero = xang / (xang + 1.774 * pow((xang + 1.182), -0.733)); //'beam extinction for zen=0(overhead
         mleafang = atan(-kbezero / pow((-kbezero * kbezero + 1), 0.5)) + 2 * atan(1); //'mean leaf angle in radians
-        //'Cells(14 + i, 20) = kbe
-        //'Cells(14 + i, 21) = mleafang * 180 / pi //'mean leaf angle in degrees
-        //'lai = Cells(13, 11) //'canopy leaf area index
-        //'abspar = Cells(7, 17) //'absorptivity for PAR of leaves
-        //'abssol = Cells(8, 17) //'absorptivity for total solar of leaves
         //'gdbeamf = Exp(-Sqr(abssol) * kbe * lai) //'CN 15.6, fraction of solar beam radiation reaching ground
-        //'Cells(14 + i, 22) = gdbeamf
         //'now solve for kd (diffuse extinction) by integrating beam over all possible zenith angles from 0 to 90, CN 15.5
         rad = 0;
         sum = 0;
@@ -120,7 +109,6 @@ void cassimilation::get_solarcalc() {
         } while (!(rad > 1.5708)); //Loop Until rad > 1.5708 //'loop until 90 degrees
         sum = sum * 2; //'complete summing
         kd = -log(sum) / lai; //'extinction coefficient for diffuse radiation
-        //'Cells(14 + i, 23) = kd //'output
         //'now...compute shaded leaf ppfd, q denotes a ppfd
         qd = 0.45 * sd * 4.6; //'converts total solar diffuse to PPFD diffuse in umol m-2 s-1
         qds = qd * (1 - exp(-(pow(abspar, 0.5) * kd * lai))) / (pow(abspar, 0.5) * kd * lai); //'mean diffuse irradiance for shaded leaves CN p. 261
@@ -142,7 +130,6 @@ void cassimilation::get_solarcalc() {
         parsl = qsl / 4.6;//'incident PAR, sunlit leaves
         parbottom = (qbt + qdt) / 4.6; //'PAR making it through the canopy
         //'in near-infrared range (assume same equations as for PAR, but different absorptances and incoming fluxes in Wm-2
-        //'absnir = Cells(9, 17) //'absorptivity of leaves to NIR
         qd = 0.55 * sd; //'converts total solar diffuse to NIR diffuse in Wm-2
         qds = qd * (1 - exp(-(pow(absnir, 0.5) * kd * lai))) / (pow(absnir, 0.5) * kd * lai); //'mean diffuse nir irradiance for shaded leaves CN p. 261
         qdt = qd * exp(-(pow(absnir, 0.5) * kd * lai)); //'diffuse NIR irradiance at bottom of canopy, CN p. 255, Eqn 15.6
@@ -172,11 +159,7 @@ void cassimilation::get_solarcalc() {
     } //Endif//
     //'now compute long wave irradiance
     ea = patm * (maxvpd - vpd); //'vapor pressure in kPa
-    //'ta = Cells(3, 19) + 273.15 //'air temp in K
     eac = 1.72 * pow((ea / (airtemp + 273.15)), (1.0 / 7.0)); //'emissivity of clear sky CN  10.10
-    //'boltz = Cells(9, 11) //'boltzman constant
     la = eac * sbc * pow((airtemp + 273.15), 4); //'long wave irradiance from clear sky
     lg = 0.97 * sbc * pow((airtemp + 273.15), 4); //'long wave irradiance from ground...assumes equilibrium with air temp
-    //'Cells(14 + i, 16) = la
-    //'Cells(14 + i, 17) = lg
 }
