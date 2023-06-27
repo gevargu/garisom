@@ -13,8 +13,6 @@
 #include <iterator>
 #include <cstring>
 
-#include "05CAssimilation.h"
-
 using namespace std;
 class hydraulics
 {

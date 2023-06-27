@@ -1,5 +1,3 @@
-#define FIO_PRECISION 12
-
 // For data inputs // these numbers are arbitrary for the most part, but ensure enough memory
 #define MAX_SUMMARY_COLS 121
 #define MAX_SUMMARY_ROWS 2001

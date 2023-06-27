@@ -86,12 +86,9 @@ void hydraulics::qtrapwbr(double& olds, long& t, double& p1, double& p2, const d
 }
 
 // root E(P) curves
-void hydraulics::get_rootPcrit(double er[][100001],double kr[][100001],long& z, const int& layers,double* ksatr, double& p1,
+void hydraulics::get_rootPcrit(double er[6][100001],double kr[6][100001],long& z, const int& layers,double* ksatr, double& p1,
    double& p2, const double& pinc,long& k,double& e,double& olds, long& t, const double& b, const double& c, double& s,
    long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx, const double& kmin, double* pcritr) { //generates fresh global E(P) curve for the element(erases history)
-   //clear arrays from earlier calls
-   memset(er, 0, sizeof(er));//Erase er
-   memset(kr, 0, sizeof(kr));//Erase kr
    
    //do root elements
    for (z = 1; z <= layers; z++) {//z = 1 To layers
@@ -120,13 +117,10 @@ void hydraulics::get_rootPcrit(double er[][100001],double kr[][100001],long& z, 
    } //endfor// z
 } //endsub//
 
-void hydraulics::get_rootPcrit_v(double er_v[][100001],double kr_v[][100001],long& z, const int& layers,double* ksatr,
+void hydraulics::get_rootPcrit_v(double er_v[6][100001],double kr_v[6][100001],long& z, const int& layers,double* ksatr,
    double& p1, double& p2, const double& pinc,long& k,double& e,double& olds, long& t, const double& b, const double& c,
    double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx, const double& kmin,
    double* pcritr) { //generates fresh global E(P) curve for the element(erases history)
-   //clear arrays from earlier calls
-   memset(er_v, 0, sizeof(er_v));//Erase er_v
-   memset(kr_v, 0, sizeof(kr_v));//Erase kr_v
    
    //do root elements
    for (z = 1; z <= layers; z++) {//z = 1 To layers 
@@ -268,8 +262,6 @@ void hydraulics::ludcmp(double& sum, double& aamax, double jmatrix[7][7], double
          }
       }
    }
-   memset(vv, 0, sizeof(vv));
-   //Erase vv
 }
 
 // solves the decomposed jacobian delta p's
@@ -553,12 +545,9 @@ void hydraulics::get_stemPcrit(double* es,bool vCurve, double* es_v, double &p1,
    
    double* es_ptr = es;
    
-   if (vCurve) {
-      memset(es_v, 0, sizeof(es_v));
+   if (vCurve == true) {
       es_ptr = es_v;
-   } else {
-      memset(es, 0, sizeof(es));
-   } //memset(es, 0, sizeof(es));//Erase es //eliminate values from previous calls
+   } // Assign pointer
    
    p1 = 0;
    k = 1;
@@ -674,13 +663,11 @@ void hydraulics::get_leafPcrit(double* el, bool vCurve, double* el_v, double &p1
    double& e, double& olds, long& t, const long& f, const double& b, const double& c, const double& ksatl,double &s,
    long& it, long& tnm, double& del, double& x, double& sum, double& epsx, double& ksh, const double& kmin, double& pcritl) {
    double* el_ptr = el;
-   if (vCurve) { 
-      memset(el_v, 0, sizeof(el_v));
+
+   if (vCurve == true) { 
       el_ptr = el_v;
-   } else {
-      memset(el, 0, sizeof(el));
-   } //memset(el_ptr, 0, sizeof(el_ptr));//Erase el_ptr //eliminate values from previous calls
-   
+   }//Assign pointer
+      
    p1 = 0;
    k = 1;
    e = 0; //value of integral

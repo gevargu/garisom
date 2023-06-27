@@ -54,7 +54,11 @@ public:
     void trapzdvg(const long& t,double* a, double* n, double* kmaxrh,const long& z, double& p1, double& p2, double& s, long& it, long& tnm, double& del, double& x, double& sum);
     void qtrapvg(double& olds, long& t,double* a, double* n, double* kmaxrh,const long& z, double& p1, double& p2, double& s, long& it, long& tnm, double& del, double& x, double& sum);
     // Soil E(P) global curve
-    void get_rhizoPcrit(long& z, int& layers, double& p1, double& p2,long& k, double& e, double erh[][100001], double krh[][100001], double& pinc, double& kmin, double& olds, long& t,double* a, double* n, double* kmaxrh, double& s, long& it, long& tnm, double& del, double& x, double& sum, double* pcritrh);
+    void get_rhizoPcrit(long& z, int& layers, double& p1, double& p2,long& k, double& e, double erh[6][100001], double krh[6][100001], double& pinc, double& kmin,
+        double& olds, long& t,double* a, double* n, double* kmaxrh, double& s, long& it, long& tnm, double& del, double& x, double& sum, double* pcritrh);
+    // Soil water flow 
+    void get_soilflow();
+
 };
 
 #endif

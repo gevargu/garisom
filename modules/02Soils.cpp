@@ -447,7 +447,7 @@ void soils::get_soilwetness(double& drainage, double& runoff, double& waterold, 
             dataCells[rowD + dd][colD + dColF_End_watercontent] = waternew * 1000; //'root zone water content in mm
             // always store the water content as the "final" -- not worth testing if it's really the last day of the year
             gs_ar_waterFinal[gs_yearIndex] = waternew * 1000;
-            dataCells[rowD + dd][colD + dColF_End_waterchange]; waterchange * 1000; //'change in water content over PREVIOUS timestep
+            dataCells[rowD + dd][colD + dColF_End_waterchange] = waterchange * 1000; //'change in water content over PREVIOUS timestep
             //'if raining(xx) = "y" { //if// Cells(16 + dd, 59) = Cells(16 + dd - 1, 4) //'rain input per previous timestep
             if (rainEnabled == true){// && dSheet.Cells(rowD + dd - 1, colD + dColRain) < 100.0)
                 dataCells[rowD + dd][colD + dColF_End_rain] = dataCells[rowD + dd - 1][colD + dColRain]; //'rain input per previous timestep
@@ -638,4 +638,48 @@ void soils::get_predawns(long& k, long* layer, long& z, long& rowD, long& colD, 
         dataCells[rowD + dd][colD + dColF_p1 - 1 + o + z] = pd[z]; //'soil pressures by layer (only for rooted layers)
     } //for//z
     //'Cells(16 + dd, 65) = pd(0) //'water potential of top layer
+}
+
+/* Soil water vertical flow */
+//'gets flow out of each layer via soil, not including the groundwater basement
+void soils::get_soilflow(){
+    for (long z = 0; z < layers; z++){//z = 0 To layers - 1
+        store = kmaxrh[z]; //'store the rhizosphere kmax for now
+        kmaxrh[z] = kkmax[z + 1] * 1 / (depth[z] / 2.0 + depth[z + 1] / 2.0); //'reset it to the vertical soil kmax per m2 ground using distance between midpoints of each layer. Use properties of fatter layer.
+        if (pd[z] == pd[z + 1]){
+            soilredist[z] = 0; //'no redistribution (gravity ignored!)
+        }
+        if (pd[z] != pd[z + 1]) { //if//
+            
+            if (pd[z] < pd[z + 1]) { //if// //'flow is out of layer z (positive)
+                p1 = pd[z];
+                pend = pd[z + 1];
+            } else { //'flow is into layer z(negative)
+                p1 = pd[z + 1];
+                pend = pd[z];
+            } //End if//
+            e = 0; //'flow integral
+            
+            do{
+                p2 = p1 + pinc;
+                qtrapvg(olds,t,a,n,kmaxrh,z,p1,p2,s,it,tnm,del,x,sum);
+                e = e + s;
+                p1 = p2; //'reset p1 for next increment
+            } while (!(p2 >= pend || p2 > 5));//Loop Until p2 >= pend Or p2 > 5 //'cutoff for really dry soil
+            
+            if (pd[z] < pd[z + 1]) { //if// //'flow is out of layer z (positive)
+                soilf[z] = e; //'flow in kg hr-1 m-2 ground area
+            } else { //'flow is into layer z(negative)
+                soilf[z] = -e;
+            }//End if//
+        }//End if//
+        kmaxrh[z] = store; //'reset rhizosphere kmaxrh (though i don//'t THINK it//'s used again?)
+    }//for//z
+    
+    soilredist[0] = soilf[0]; //'set upper layer which has only one flux
+    soilredist[layers] = -1 * soilf[layers - 1]; //'set water flowing into/out of top of the bottom layer...soilredist is net soil flow of layer
+    //'now calculate net flows of internal layers
+    for (long z = 1; z < layers; z++){//z = 1 To layers - 1
+        soilredist[z] = -1 * soilf[z - 1] + soilf[z]; //'add up to get net flow...remember negative flow is flow into the layer
+    }//for//z
 }

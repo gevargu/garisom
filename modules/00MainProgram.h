@@ -1,6 +1,8 @@
 #ifndef MAINPROGRAM
 #define MAINPROGRAM
 
+#define FIO_PRECISION 12
+
 // Necessary cpp libraries
 #include <stdio.h>
 #include <iostream>

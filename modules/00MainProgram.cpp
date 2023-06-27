@@ -362,14 +362,15 @@ void MainProgram::readGrowSeasonData(){
 /* Extract CO2 from growing season data*/
 double MainProgram::getCarbonByYear(const long& yearNum, std::string GSCells[101][11], const long& maxYears) {
     long startRow = 2; // skipping the header
+    double ca_year;
     for (long gsC = 0; gsC <= maxYears; gsC++){ // note this list had no header so we don't skip the first row  
         gsC = gsC;
         if (yearNum == std::atol(GSCells[gsC+startRow][1].c_str()) && std::atof(GSCells[gsC+startRow][4].c_str()) > 0) {
             //return carbonListCells[carbCount][2];
-            double ca_year = std::atof(GSCells[gsC+startRow][4].c_str()); // get current year atmospheric CO2 in ppm
-            return ca_year;
+            ca_year = std::atof(GSCells[gsC+startRow][4].c_str()); // get current year atmospheric CO2 in ppm
         }
     }
+    return ca_year;
 }
 
 /* Reading climate forcing and output data sheets*/
@@ -812,6 +813,9 @@ short MainProgram::cleanModelVars()
     // model program vars
     root_b = 0;
     root_p12 = 0;
+    ecritsystem = 0;
+    pcritsystem = 0;
+    return -1; // true in VBA langauge
 }
 
 /* Model iterator */
@@ -950,22 +954,28 @@ void MainProgram::readSiteAreaValues(){
 // /* Get pcrits */
 void MainProgram::componentpcrits(){ //'gets pcrits
     soilcalculator.get_rhizoPcrit(z, layers,p1,p2,k,e,erh,krh,pinc,kmin,olds,t,a,n,kmaxrh,s,it,tnm,del,x,sum,pcritrh);
+    //clear arrays from earlier calls
+    memset(er, 0, sizeof(er));//Erase er
+    memset(kr, 0, sizeof(kr));//Erase kr
     hydraulicscalculator.get_rootPcrit(er,kr,z,layers,ksatr,p1,p2,pinc,k,e,olds,t,root_b,root_c,s,it,tnm,del,x,sum,f,epsx,kmin,pcritr);
     bool vCurve = false;
+    memset(es, 0, sizeof(es));//Erase es
     hydraulicscalculator.get_stemPcrit(es,vCurve,es_v,p1,p2,pinc,k,e,olds,t,f,stem_b,stem_c,ksats,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcrits); //'gets stem element curve 
-    pcrits;
+    memset(el, 0, sizeof(el));//Erase el
     hydraulicscalculator.get_leafPcrit(el,vCurve,el_v,p1,p2,pinc,k,e,olds,t,f,leaf_b,leaf_c,ksatl,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcritl); //'gets leaf element curve
-    pcritl;
-    
+    //clear arrays from earlier calls
+    memset(er_v, 0, sizeof(er_v));//Erase er_v
+    memset(kr_v, 0, sizeof(kr_v));//Erase kr_v
     hydraulicscalculator.get_rootPcrit_v(er_v,kr_v,z,layers,ksatr,p1,p2,pinc,k,e,olds,t,root_b,root_c,s,it,tnm,del,x,sum,f,epsx,kmin,pcritr); //erases history for md solution
     vCurve = true;
+    memset(es_v, 0, sizeof(es_v));//Erase es_v
     hydraulicscalculator.get_stemPcrit(es,vCurve,es_v,p1,p2,pinc,k,e,olds,t,f,stem_b,stem_c,ksats,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcrits);
+    memset(el_v, 0, sizeof(el_v));//Earase el_v
     hydraulicscalculator.get_leafPcrit(el,vCurve,el_v,p1,p2,pinc,k,e,olds,t,f,leaf_b,leaf_c,ksatl,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcritl);
-
-    memset(ter, 0, sizeof(ter));
-    memset(tkr, 0, sizeof(tkr));
-    memset(tes, 0, sizeof(tes));
-    memset(tel, 0, sizeof(tel));
+    memset(ter, 0, sizeof(ter));//Erase ter 
+    memset(tkr, 0, sizeof(tkr));//Erase tkr
+    memset(tes, 0, sizeof(tes));//Erase tes
+    memset(tel, 0, sizeof(tel));//Erase tel
 }
 
 /* Time step iterator function */
@@ -1155,6 +1165,7 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
             gs_ar_nrFailConverge, gs_ar_nrFailConverge_Water, gs_ar_nrFailConverge_WaterMax,
             weird,check,layer,k,ticks,unknowns,d,imax,ii,ll,gs_yearIndex,dd,
             layers,layerfailure,failspot);
+        memset(vv, 0, sizeof(vv));//Erase vv
         //'if check >= 400 { //if// GoTo 60: //'NR can//'t find a solution
         if (check > 500){ //if//
             break;//Exit do
@@ -1186,24 +1197,24 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
             einc,dedp,dedpf,pcritsystem,ecritsystem,k,p,layer,test,total,layers,
             refilling,layerfailure); //'stores the entire composite curve //if skip = 0 { //if//
         
-    //     // gets sun layer leaf temperature from energy balance
-    //     photosyncalculator.get_leaftemps(rabs,ssun,sref,emiss,la,lg,lambda,airtemp,grad,gha,wind,
-    //         leafwidth,laperba,eplantl,eplant,numerator,denominator,sbc,sha,leaftemp,lavpd,
-    //         patm,vpd,p);
-    //     // gets shade layer leaf temperature
-    //     photosyncalculator.get_leaftempsshade(rabs,sshade,sref,emiss,lg,numerator,sbc,
-    //         airtemp,lambda,eplantl,denominator,sha,grad,gha,leaftempsh,lavpdsh,patm,
-    //         vpd,p);
-    //     // gets sun layer photosynthesis
-    //     photosyncalculator.get_assimilation(lavpd,gcanw,gmax,eplantl,gcanc,comp25,comp,gas,leaftemp,
-    //         numerator,svvmax,hdvmax,havmax,denominator,vmax25,vmax,svjmax,hdjmax,hajmax,jmax,jmax25,
-    //         kc25,ko25,kc,ko,rday25,rday,ci,jact,qmax,qsl,lightcurv,je,oa,jc,var,thetac,ca,psyn,cin,
-    //         marker,psynmax,p,night);
-    //     // gets shade layer photosynthesis
-    //     photosyncalculator.get_assimilationshade(lavpdsh,gcanwsh,gmax,eplantl,gcancsh,comp,comp25,gas,
-    //         leaftempsh,numerator,svvmax,hdvmax,havmax,denominator,vmax25,vmax,svjmax,hdjmax,hajmax,jmax,
-    //         jmax25,kc25,ko25,kc,ko,rday25,rdaysh,ci,jact,qmax,qsh,lightcurv,je,oa,jc,var,thetac,ca,psynsh,
-    //         cinsh,marker,psynmaxsh,p,night);
+        // gets sun layer leaf temperature from energy balance
+        photosyncalculator.get_leaftemps(rabs,ssun,sref,emiss,la,lg,lambda,airtemp,grad,gha,wind,
+            leafwidth,laperba,eplantl,eplant,numerator,denominator,sbc,sha,leaftemp,lavpd,
+            patm,vpd,p);
+        // gets shade layer leaf temperature
+        photosyncalculator.get_leaftempsshade(rabs,sshade,sref,emiss,lg,numerator,sbc,
+            airtemp,lambda,eplantl,denominator,sha,grad,gha,leaftempsh,lavpdsh,patm,
+            vpd,p);
+        // gets sun layer photosynthesis
+        photosyncalculator.get_assimilation(lavpd,gcanw,gmax,eplantl,gcanc,comp25,comp,gas,leaftemp,
+            numerator,svvmax,hdvmax,havmax,denominator,vmax25,vmax,svjmax,hdjmax,hajmax,jmax,jmax25,
+            kc25,ko25,kc,ko,rday25,rday,ci,jact,qmax,qsl,lightcurv,je,oa,jc,var,thetac,ca,psyn,cin,
+            marker,psynmax,p,night);
+        // gets shade layer photosynthesis
+        photosyncalculator.get_assimilationshade(lavpdsh,gcanwsh,gmax,eplantl,gcancsh,comp,comp25,gas,
+            leaftempsh,numerator,svvmax,hdvmax,havmax,denominator,vmax25,vmax,svjmax,hdjmax,hajmax,jmax,
+            jmax25,kc25,ko25,kc,ko,rday25,rdaysh,ci,jact,qmax,qsh,lightcurv,je,oa,jc,var,thetac,ca,psynsh,
+            cinsh,marker,psynmaxsh,p,night);
     } while (!(sum == layers || test == 1 || night == "y" && (dd > 1 && !isNewYear) || check >= 500)); //'loop to complete failure unless it//'s night
 
     if (chalk > 0) { //if//
@@ -1248,29 +1259,29 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
     if (night == "n"){
         isNight = false;
     }
-    // if (night == "n" && psynmax > 0 && psynmaxsh > 0 && weird == 0) { //if//
-    // //DoEvents //'[HNT] this was required to prevent a hard lock -- this portion of the loop is the most intensive, so let Excel take a "breath" by processing system events to prevent lockup
-    //     hydraulicscalculator.get_canopypressure(ecritsystem,ter,er,kr,tkr,er_v,kr_v,tes,es,es_v,tel,el,el_v,
-    //         kminroot,sum,prh,pd,pcritr,pr,psynmaxmd,psynmaxshmd,e,einc,dedplmin,ksatp,jmatrix,frt,dfrdpr,
-    //         pcritrh,p1,p2,plow,pinc,elow,erh,klow,krh,ehigh,khigh,estart,klower,efinish,kupper,flow,func,
-    //         dfrhdprh,dfrhdpr,dfrdprh,threshold,initialthreshold,aamax,vv,dum,indx,pcrits,waterold,
-    //         gs_ar_nrFailConverge_Water,gs_ar_nrFailConverge_WaterMax,pgrav,ps,pl,pcritl,pleafv,predawn,
-    //         plold,dedplzero,dedpl,klossv,pcritsystem,rabs,ssun,sref,emiss,la,lg,lambda,airtemp,grad,gha,wind, 
-    //         leafwidth,emd,laperba,sbc,numerator,denominator,sha,leaftmd,lavpdmd,patm,vpd,sshade,leaftshmd,
-    //         lavpdshmd,gcanwmd,gmax,gcancmd,comp,comp25,gas,svvmax,havmax,hdvmax,vmax25,vmax,svjmax,hdjmax,hajmax,
-    //         jmax,jmax25,kc25,ko25,kc,ko,rday25,rdaymd,ci,jact,qmax,qsl,lightcurv,je,oa,jc,var,thetac,ca,psynmd,
-    //         cinmd,marker,gcanwshmd,gcancshmd,rdayshmd,qsh,psynshmd,cinshmd,maxkloss,dpmax,dpamax,amaxmax,dpamin,
-    //         amaxfrac,dpa,rmean,md,lavpd,dpasun,mdsh,amaxfracsh,lavpdsh,pleaf,eplantl,transpiration,psynact,psyn,
-    //         gcmd,gcanw,cinc,cin,transpirationsh,psynactsh,psynsh,gcmdsh,gcanwsh,lavpdmdsh,cincsh,cinsh,kminstem,
-    //         kminleaf,kroot,kstem,kleaf,k,layer,tlayer,t,failure,test,p,gs_ar_nrFailConverge,weird,check,ticks,
-    //         unknowns,d,imax,ii,ll,gs_yearIndex,dd,totalv,runmean,total,cutoff,halt,haltsh,layers,layerfailure,
-    //         tlayerfailure,failspot,night,refilling); //'returns canopy P and associated output
-    //                        //'if check >= 2000 { //if// GoTo 60:
-    //     if (refilling == true) {
-    //         hydraulicscalculator.update_curves(kroot,kminroot,pinc,proot,er,kr,kstem,kminstem,pstem,es,kleaf,
-    //             kminleaf,pleaf,el,halt,phigh,layers); //'updates element E(P) curves as required for midday exposure for no refilling
-    //     }
-    // } //End if// //'night <> "n", psynmax IF
+    if (night == "n" && psynmax > 0 && psynmaxsh > 0 && weird == 0) { //if//
+    //DoEvents //'[HNT] this was required to prevent a hard lock -- this portion of the loop is the most intensive, so let Excel take a "breath" by processing system events to prevent lockup
+        hydraulicscalculator.get_canopypressure(ecritsystem,ter,er,kr,tkr,er_v,kr_v,tes,es,es_v,tel,el,el_v,
+            kminroot,sum,prh,pd,pcritr,pr,psynmaxmd,psynmaxshmd,e,einc,dedplmin,ksatp,jmatrix,frt,dfrdpr,
+            pcritrh,p1,p2,plow,pinc,elow,erh,klow,krh,ehigh,khigh,estart,klower,efinish,kupper,flow,func,
+            dfrhdprh,dfrhdpr,dfrdprh,threshold,initialthreshold,aamax,vv,dum,indx,pcrits,waterold,
+            gs_ar_nrFailConverge_Water,gs_ar_nrFailConverge_WaterMax,pgrav,ps,pl,pcritl,pleafv,predawn,
+            plold,dedplzero,dedpl,klossv,pcritsystem,rabs,ssun,sref,emiss,la,lg,lambda,airtemp,grad,gha,wind, 
+            leafwidth,emd,laperba,sbc,numerator,denominator,sha,leaftmd,lavpdmd,patm,vpd,sshade,leaftshmd,
+            lavpdshmd,gcanwmd,gmax,gcancmd,comp,comp25,gas,svvmax,havmax,hdvmax,vmax25,vmax,svjmax,hdjmax,hajmax,
+            jmax,jmax25,kc25,ko25,kc,ko,rday25,rdaymd,ci,jact,qmax,qsl,lightcurv,je,oa,jc,var,thetac,ca,psynmd,
+            cinmd,marker,gcanwshmd,gcancshmd,rdayshmd,qsh,psynshmd,cinshmd,maxkloss,dpmax,dpamax,amaxmax,dpamin,
+            amaxfrac,dpa,rmean,md,lavpd,dpasun,mdsh,amaxfracsh,lavpdsh,pleaf,eplantl,transpiration,psynact,psyn,
+            gcmd,gcanw,cinc,cin,transpirationsh,psynactsh,psynsh,gcmdsh,gcanwsh,lavpdmdsh,cincsh,cinsh,kminstem,
+            kminleaf,kroot,kstem,kleaf,k,layer,tlayer,t,failure,test,p,gs_ar_nrFailConverge,weird,check,ticks,
+            unknowns,d,imax,ii,ll,gs_yearIndex,dd,totalv,runmean,total,cutoff,halt,haltsh,layers,layerfailure,
+            tlayerfailure,failspot,night,refilling); //'returns canopy P and associated output
+                           //'if check >= 2000 { //if// GoTo 60:
+        if (refilling == true) {
+            hydraulicscalculator.update_curves(kroot,kminroot,pinc,proot,er,kr,kstem,kminstem,pstem,es,kleaf,
+                kminleaf,pleaf,el,halt,phigh,layers); //'updates element E(P) curves as required for midday exposure for no refilling
+        }
+    } //End if// //'night <> "n", psynmax IF
 
     if (soilred == true) { //if//
        //soilcalculator.get_soilflow();
@@ -1427,7 +1438,7 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
     if (isNewYear){
         isNewYear = false; // always set this
     }
-    // return -1;
+    return -1;
 }
 
 /* Running the model */ 
@@ -1580,12 +1591,6 @@ long MainProgram::Rungarisom(){
         }
 
     } while (!(dataCells[rowD + 1 + dd][colD + dColDay] < 0.01));
-    std::cout << "              2010 CO2 atm: " << GSCells[2][4] << std::endl;
-    std::cout << std::endl;
-    std::cout << "       Roots Pcrit layer 1: " << pcritr[1] << std::endl;
-    std::cout << std::endl;
-    std::cout << "                Stem Pcrit: " << pcrits << std::endl;
-    std::cout << std::endl;
-    std::cout << "                Leaf Pcrit: " << pcritl << std::endl;
-    std::cout << std::endl;
+  
+    return 1;
 }
