@@ -163,3 +163,405 @@ void cassimilation::get_solarcalc(double& fet, double& et, double& sm, const dou
     la = eac * sbc * pow((airtemp + 273.15), 4); //'long wave irradiance from clear sky
     lg = 0.97 * sbc * pow((airtemp + 273.15), 4); //'long wave irradiance from ground...assumes equilibrium with air temp
 }
+
+/* Leaf energy balance functions*/
+// gets sun layer leaf temp and leaf-to-air vpd from E, Campbell and Norman book
+void cassimilation::get_leaftemps(double& rabs, const double& ssun, const double& sref, const double& emiss,
+    const double& la, const double& lg, double& lambda, const double& airtemp, double& grad,
+    double& gha, const double& wind, const double& leafwidth, const double& laperba, double* eplantl,
+    double* eplant, double& numerator, double& denominator, const double& sbc, const double& sha,
+    double* leaftemp, double* lavpd, const double& patm, const double& vpd,
+    long& p){
+    rabs = 0.5 * (0.5 * ssun + 0.5 * sref) + emiss * (0.5 * la + 0.5 * lg); //'total absorbed radiation for sun leaves; CN 11.14
+    lambda = -42.9143 * airtemp + 45064.3; //'heat of vaporization for water at air temp in J mol-1
+    grad = 0.1579 + 0.0017 * airtemp + 0.00000717 * pow(airtemp, 2); //'radiative conductance (long wave) at air temp in mol m-2 s-1
+    gha = 1.4 * 0.135 * pow((wind / leafwidth), 0.5); //'heat conductance in mol m-2s-1
+    eplantl[p] = eplant[p] * (1.0 / laperba) * (1.0 / 3600.0) * 55.4; //'convert to E per leaf area in mol m-2s-1
+    numerator = rabs - emiss * sbc * pow((airtemp + 273.2), 4) - lambda * eplantl[p] / 2.0; //'divide E by 2 because energy balance is two sided.
+    denominator = sha * (grad + gha);
+    leaftemp[p] = airtemp + numerator / denominator; //'leaf temp for supply function
+    lavpd[p] = (101.3 / patm) * (-0.0043 + 0.01 * exp(0.0511 * airtemp)); //'saturated mole fraction of vapor in air
+    lavpd[p] = (101.3 / patm) * (-0.0043 + 0.01 * exp(0.0511 * leaftemp[p])) - lavpd[p] + vpd; //'leaf-to-air vpd
+    if (lavpd[p] < 0){
+        lavpd[p] = 0; //'don//'t allow negative lavpd
+    }               //'eplantl[p] = eplantl[p] * 1000 //'convert to mmol m-2 s-1
+}
+
+//'gets virgin sun layer leaf temp and leaf-to-air vpd from E, Campbell and Norman book
+void cassimilation::get_leaftempsmd(double& rabs, const double& ssun, const double& sref, const double& emiss, const double& la,
+    const double& lg, double& lambda, const double& airtemp, double& grad, double& gha, const double& wind,
+    const double& leafwidth, double& emd, const double& e, const double& laperba, const double& sbc,
+    double& numerator, double& denominator, const double& sha, double& leaftmd, double& lavpdmd,
+    const double& patm, const double& vpd){
+    rabs = 0.5 * (0.5 * ssun + 0.5 * sref) + emiss * (0.5 * la + 0.5 * lg); //'total absorbed radiation for sun leaves; CN 11.14
+    lambda = -42.9143 * airtemp + 45064.3; //'heat of vaporization for water at air temp in J mol-1
+    grad = 0.1579 + 0.0017 * airtemp + 0.00000717 * pow(airtemp, 2); //'radiative conductance (long wave) at air temp in mol m-2 s-1
+    gha = 1.4 * 0.135 * pow((wind / leafwidth), 0.5); //'heat conductance in mol m-2s-1
+    emd = e * (1 / laperba) * (1.0 / 3600.0) * 55.4; //'convert to E per leaf area in mol m-2s-1
+    numerator = rabs - emiss * sbc * pow((airtemp + 273.2), 4) - lambda * emd / 2.0; //'divide E by 2 because energy balance is two sided.
+    denominator = sha * (grad + gha);
+    leaftmd = airtemp + numerator / denominator; //'leaf temp for supply function
+    lavpdmd = (101.3 / patm) * (-0.0043 + 0.01 * exp(0.0511 * airtemp)); //'saturated mole fraction of vapor in air
+    lavpdmd = (101.3 / patm) * (-0.0043 + 0.01 * exp(0.0511 * leaftmd)) - lavpdmd + vpd; //'leaf-to-air vpd
+    if (lavpdmd < 0){
+        lavpdmd = 0;//'don't allow negative lavpd
+    }
+    //'eplantl(p) = eplantl(p) * 1000 //'convert to mmol m-2 s-1
+}
+
+// gets shade layer leaf temp and leaf-to-air vpd from E, Campbell and Norman book   
+void cassimilation::get_leaftempsshade(double& rabs, const double& sshade, const double& sref, const double& emiss,
+    const double& lg, double& numerator, const double& sbc, const double& airtemp, const double& lambda,
+    double* eplantl, double& denominator, const double& sha, const double& grad, const double& gha,
+    double* leaftempsh, double* lavpdsh, const double& patm, const double& vpd,
+    long& p){
+    rabs = 0.5 * (0.5 * sshade + 0.5 * sref) + emiss * lg; //'total absorbed radiation for shaded leaves
+    //'lambda = -42.9143 * airtemp + 45064.3 //'heat of vaporization for water at air temp in J mol-1
+    //'grad = 0.1579 + 0.0017 * airtemp + 0.00000717 * airtemp ^ 2 //'radiative conductance (long wave) at air temp in mol m-2 s-1
+    //'gha = 1.4 * 0.135 * (wind / leafwidth) ^ 0.5 //'heat conductance in mol m-2s-1
+    //'eplantl[p] = eplant[p] * (1 / laperba) * (1 / 3600) * 55.4 //'convert to E per leaf area in mol m-2s-1
+    numerator = rabs - emiss * sbc * pow((airtemp + 273.2), 4) - lambda * eplantl[p] / 2.0; //'divide E by 2 because energy balance is two sided.
+    denominator = sha * (grad + gha);
+    leaftempsh[p] = airtemp + numerator / denominator; //'leaf temp for supply function
+    lavpdsh[p] = (101.3 / patm) * (-0.0043 + 0.01 * exp(0.0511 * airtemp)); //'saturated mole fraction of vapor in air
+    lavpdsh[p] = (101.3 / patm) * (-0.0043 + 0.01 * exp(0.0511 * leaftempsh[p])) - lavpdsh[p] + vpd; //'leaf-to-air vpd
+    if (lavpdsh[p] < 0){
+        lavpdsh[p] = 0; //'don//'t allow negative lavpd
+    }
+    eplantl[p] = eplantl[p] * 1000; //'convert to mmol m-2 s-1
+}
+
+//'gets virgin shade layer leaf temp and leaf-to-air vpd from E, Campbell and Norman book   
+void cassimilation::get_leaftempsshademd(double& rabs, const double& sshade, const double& sref, const double& emiss, const double& lg,
+    double& emd, double& lambda, const double& airtemp, const double& sbc, double& numerator, double& denominator,
+    const double& sha, const double& grad, const double& gha, double& leaftshmd, double& lavpdshmd, const double& patm, const double& vpd){
+    rabs = 0.5 * (0.5 * sshade + 0.5 * sref) + emiss * lg; //'total absorbed radiation for shaded leaves
+    numerator = rabs - emiss * sbc * pow((airtemp + 273.2), 4) - lambda * emd / 2.0; //'divide E by 2 because energy balance is two sided.
+    denominator = sha * (grad + gha);
+    leaftshmd = airtemp + numerator / denominator; //'leaf temp for supply function
+    lavpdshmd = (101.3 / patm) * (-0.0043 + 0.01 * exp(0.0511 * airtemp)); //'saturated mole fraction of vapor in air
+    lavpdshmd = (101.3 / patm) * (-0.0043 + 0.01 * exp(0.0511 * leaftshmd)) - lavpdshmd + vpd; //'leaf-to-air vpd
+    if (lavpdshmd < 0){
+        lavpdshmd = 0; //'don't allow negative lavpd
+    }
+    emd = emd * 1000; //'convert to mmol m-2 s-1
+}
+
+/* Photosynthesis fcuntions*/
+// sun layer photosynthesis
+void cassimilation::get_assimilation(double* lavpd, double* gcanw, const double& gmax, double* eplantl, double* gcanc,
+    const double& comp25, double& comp, const double& gas, double* leaftemp, double& numerator,
+    const double& svvmax, const double& hdvmax, const double& havmax, double& denominator,
+    const double& vmax25, double& vmax, const double& svjmax, const double& hdjmax, const double& hajmax,
+    double& jmax, const double& jmax25, const double& kc25, const double& ko25, double& kc, double& ko,
+    double& rday25, double* rday, double& ci, double& jact, const double& qmax, const double& qsl,
+    const double& lightcurv, double& je, const double& oa, double& jc, double& var, const double& thetac,
+    const double& ca, double* psyn, double* cin, double& marker, double& psynmax,
+    long& p, const std::string& night){
+    //'get g from D and e
+    if (lavpd[p] == 0) { //if//
+        gcanw[p] = gmax; //'maximum g if no lavpd
+    } else {
+        gcanw[p] = eplantl[p] / lavpd[p]; //'gcanopy in mmol m-2s-1 (leaf area)
+    } //End if//
+    //'gcanw[p] = eplantl[p] / lavpd[p] //'gcanopy in mmol m-2s-1 (leaf area)
+    gcanc[p] = (gcanw[p] / 1.6) * 1000; //'convert to CO2 conductance in umol m-2 s-1
+    //'adjust photosynthetic inputs for Tleaf
+    comp = comp25 * exp((37830 * ((leaftemp[p] + 273.15) - 298.15)) / (298.15 * gas * (leaftemp[p] + 273.15))); //'Bernacchi via Medlyn
+    numerator = (1 + exp((svvmax * 298.2 - hdvmax) / (gas * 298.2))) * exp((havmax / (gas * 298.2)) * (1 - 298.2 / (273.2 + leaftemp[p])));
+    denominator = 1 + exp((svvmax * (273.2 + leaftemp[p]) - hdvmax) / (gas * (273.2 + leaftemp[p])));
+    vmax = vmax25 * numerator / denominator; //'vmax corrected via Leunig 2002
+    numerator = (1 + exp((svjmax * 298.2 - hdjmax) / (gas * 298.2))) * exp((hajmax / (gas * 298.2)) * (1 - 298.2 / (273.2 + leaftemp[p])));
+    denominator = 1 + exp((svjmax * (273.2 + leaftemp[p]) - hdjmax) / (gas * (273.2 + leaftemp[p])));
+    jmax = jmax25 * numerator / denominator; //'jmax corrected via Leunig 2002
+    kc = kc25 * exp((79430 * ((leaftemp[p] + 273.15) - 298.15)) / (298.15 * gas * (leaftemp[p] + 273.15))); //'Bernacchi via Medlyn
+    ko = ko25 * exp((36380 * ((leaftemp[p] + 273.15) - 298.15)) / (298.15 * gas * (leaftemp[p] + 273.15))); //'Bernacchi via Medlyn
+    rday25 = vmax25 * 0.01; //'from Medlyn 2002
+    rday[p] = rday25 * pow(2, ((leaftemp[p] - 25) / 10.0));
+    rday[p] = rday[p] * pow((1 + exp(1.3 * (leaftemp[p] - 55))), -1); //'high temp inhibition, collatz
+    if (night == "n" && gcanc[p] > 0) { //if// //'solve for A and ci
+        if (p == 1) { //if// //'stomata have just opened: find the mitochondrial compensation point
+            ci = comp - 0.00000001; //'start at photorespiratory compensation point
+            do{//'loop through A-ci curve to find mitochondrial compensation point
+                ci = ci + 0.00000001;
+                jact = ((qmax * qsl + jmax) - pow((pow((-qmax * qsl - jmax), 2) - 4 * lightcurv * qmax * qsl * jmax), 0.5)) / (2 * lightcurv); //'0.9 is curvature of light response curve...this from Medlyn 2002
+                je = (jact * (ci - comp)) / (4 * (ci + 2 * comp)); //'light limited PS
+                numerator = vmax * (ci - comp);
+                denominator = ci + kc * (1 + oa / ko);
+                jc = numerator / denominator; //'rubisco limited A, umol m-2 s-1
+                var = (je + jc - pow((pow((je + jc), 2) - 4 * thetac * je * jc), 0.5)) / (2 * thetac); //'gross photosynthetic rate, gets larger with ci
+                var = var - rday[p]; //'convert gross to NET A
+            } while (!(var >= 0 || ci >= ca));//Loop Until var >= 0 Or ci >= ca //'there//'s positive Anet or not enough light
+            psyn[p] = var; //'always start with zero or above
+            cin[p] = ci; //'the dark compensation point...not predicting negative Anet
+        } //End if// //'p=1 if
+        
+        if (p > 1) { //if//
+            ci = cin[p - 1]; //'start from previous ci
+            do{//'loop through A-ci curve to find ci
+                ci = ci + 0.00000001;
+                marker = gcanc[p] * (ca - ci); //'marker is NET A from g (in umol m-2s-1, need to convert ca-ci to mole fraction), gets smaller as ci increase
+                jact = ((qmax * qsl + jmax) - pow((pow((-qmax * qsl - jmax), 2) - 4 * lightcurv * qmax * qsl * jmax), 0.5)) / (2 * lightcurv); //'0.9 is curvature of light response curve...this from Medlyn 2002
+                je = (jact * (ci - comp)) / (4 * (ci + 2 * comp)); //'light limited PS
+                numerator = vmax * (ci - comp);
+                denominator = ci + kc * (1 + oa / ko);
+                jc = numerator / denominator; //'rubisco limited A, umol m-2 s-1
+                var = (je + jc - pow((pow((je + jc), 2) - 4 * thetac * je * jc), 0.5)) / (2 * thetac); //'gross photosynthetic rate, gets larger with ci
+                var = var - rday[p]; //'convert gross to NET A
+            } while (!(var >= marker || ci >= ca));//Loop Until var >= marker Or ci >= ca //'when "a-ci" value just reaches the "g" value, that//'s the right ci...
+            psyn[p] = var; //'net assimilation, umol m-2 leaf area s-1
+            if (psyn[p] > psynmax){
+                psynmax = psyn[p];
+            }
+            cin[p] = ci; //'store ci
+        } //End if// //'p>1 if
+    } else { //'it//'s night or stomata are closed
+        if (night == "y"){
+            psyn[p] = 0 - rday[p];
+            psynmax = 0;
+            cin[p] = ca; //'respiration accounted for at night
+        }
+        if (night == "n") {
+            psyn[p] = 0;
+            psynmax = 0;
+            cin[p] = ca; //'it//'s day and p=0, g=0
+        }
+    } //End if// //'night if
+}
+
+//'gets virgin assimilation for sun leaves
+void cassimilation::get_assimilationmd(double& lavpdmd, double& gcanwmd, const double& gmax, double& emd, double& gcancmd, double& comp,
+    const double& comp25, const double& gas, const double& leaftmd, double& numerator, const double& svvmax,
+    const double& havmax, double& denominator,const double& hdvmax, const double& vmax25, double& vmax, const double& svjmax,
+    const double& hdjmax, const double& hajmax, double& jmax, const double& jmax25, const double& kc25, const double& ko25,
+    double& kc, double& ko, double& rday25, double& rdaymd, double& ci, double& jact, const double& qmax, const double& qsl,
+    const double& lightcurv, double& je, const double& oa, double& jc, double& var, const double& thetac, const double& ca,
+    double* psynmd, double& cinmd, double& marker, double& psynmaxmd, long& p, const std::string& night){
+    //'get g from D and e
+    if (lavpdmd == 0){
+        gcanwmd = gmax; //'maximum g if no lavpd
+    } else{
+        gcanwmd = emd / lavpdmd; //'gcanopy in mmol m-2s-1 (leaf area)
+    }
+    //'gcanw(p) = eplantl(p) / lavpd(p) //'gcanopy in mmol m-2s-1 (leaf area)
+    gcancmd = (gcanwmd / 1.6) * 1000; //'convert to CO2 conductance in umol m-2 s-1
+    //'adjust photosynthetic inputs for Tleaf
+    comp = comp25 * exp((37830 * ((leaftmd + 273.15) - 298.15)) / (298.15 * gas * (leaftmd + 273.15))); //'Bernacchi via Medlyn
+    numerator = (1 + exp((svvmax * 298.2 - hdvmax) / (gas * 298.2))) * exp((havmax / (gas * 298.2)) * (1 - 298.2 / (273.2 + leaftmd)));
+    denominator = 1 + exp((svvmax * (273.2 + leaftmd) - hdvmax) / (gas * (273.2 + leaftmd)));
+    vmax = vmax25 * numerator / denominator; //'vmax corrected via Leunig 2002
+    numerator = (1 + exp((svjmax * 298.2 - hdjmax) / (gas * 298.2))) * exp((hajmax / (gas * 298.2)) * (1 - 298.2 / (273.2 + leaftmd)));
+    denominator = 1 + exp((svjmax * (273.2 + leaftmd) - hdjmax) / (gas * (273.2 + leaftmd)));
+    jmax = jmax25 * numerator / denominator; //'jmax corrected via Leunig 2002
+    kc = kc25 * exp((79430 * ((leaftmd + 273.15) - 298.15)) / (298.15 * gas * (leaftmd + 273.15))); //'Bernacchi via Medlyn
+    ko = ko25 * exp((36380 * ((leaftmd + 273.15) - 298.15)) / (298.15 * gas * (leaftmd + 273.15)));//'Bernacchi via Medlyn
+    rday25 = vmax25 * 0.01; //'from Medlyn 2002
+    rdaymd = rday25 * pow(2, ((leaftmd - 25) / 10.0));
+    rdaymd = rdaymd * pow((1 + exp(1.3 * (leaftmd - 55))), -1); //'high temp inhibition, collatz
+    if (night == "n" && gcancmd > 0){ //'solve for A and ci
+        if (p == 1){//'stomata have just opened: find the mitochondrial compensation point
+            ci = comp - 0.00000001; //'start at photorespiratory compensation point
+            do{//'loop through A-ci curve to find mitochondrial compensation point
+                ci = ci + 0.00000001;
+                jact = ((qmax * qsl + jmax) - pow((pow((-qmax * qsl - jmax), 2) - 4 * lightcurv * qmax * qsl * jmax), 0.5)) / (2 * lightcurv); //'0.9 is curvature of light response curve...this from Medlyn 2002
+                je = (jact * (ci - comp)) / (4 * (ci + 2 * comp)); //'light limited PS
+                numerator = vmax * (ci - comp);
+                denominator = ci + kc * (1 + oa / ko);
+                jc = numerator / denominator; //'rubisco limited A, umol m-2 s-1
+                var = (je + jc - pow((pow((je + jc), 2) - 4 * thetac * je * jc), 0.5)) / (2 * thetac); //'gross photosynthetic rate, gets larger with ci
+                var = var - rdaymd; //'convert gross to NET A
+            } while (!(var >= 0 || ci >= ca));
+            //Loop Until var >= 0 Or ci >= ca //'there's positive Anet or not enough light
+            psynmd[p] = var; //'always start with zero or above
+            cinmd = ci; //'the dark compensation point...not predicting negative Anet
+        } //'p=1 if
+        if (p > 1){
+            ci = cinmd - 0.00000001; //'cin(p - 1) //'start from previous ci
+            do{//'loop through A-ci curve to find ci
+                ci = ci + 0.00000001;
+                marker = gcancmd * (ca - ci); //'marker is NET A from g (in umol m-2s-1, need to convert ca-ci to mole fraction), gets smaller as ci increase
+                jact = ((qmax * qsl + jmax) - pow((pow((-qmax * qsl - jmax), 2) - 4 * lightcurv * qmax * qsl * jmax), 0.5)) / (2 * lightcurv); //'0.9 is curvature of light response curve...this from Medlyn 2002
+                je = (jact * (ci - comp)) / (4 * (ci + 2 * comp)); //'light limited PS
+                numerator = vmax * (ci - comp);
+                denominator = ci + kc * (1 + oa / ko);
+                jc = numerator / denominator; //'rubisco limited A, umol m-2 s-1
+                var = (je + jc - pow((pow((je + jc), 2) - 4 * thetac * je * jc), 0.5)) / (2 * thetac); //'gross photosynthetic rate, gets larger with ci
+                var = var - rdaymd; //'convert gross to NET A
+            } while (!(var >= marker || ci >= ca));
+            //Loop Until var >= marker Or ci >= ca //'when "a-ci" value just reaches the "g" value, that's the right ci...
+            psynmd[p] = var; //'net assimilation, umol m-2 leaf area s-1
+            if (psynmd[p] > psynmaxmd){
+                psynmaxmd = psynmd[p];
+            }
+            cinmd = ci; //'store ci
+        } //'p>1 if
+    } else {//'it's night or stomata are closed
+        if (night == "y"){
+            psynmd[p] = 0 - rdaymd;
+            psynmaxmd = 0; //'respiration accounted for at night
+        }
+        if (night == "n"){
+            psynmd[p] = 0;
+            psynmaxmd = 0; //'it's day and p=0, g=0
+        }
+    } //'night if
+    //'Cells(16 + p, 65) = psynsh(p)
+}
+
+// shade layer photosynthesis
+void cassimilation::get_assimilationshade(double* lavpdsh, double* gcanwsh, const double& gmax, double* eplantl, double* gcancsh,
+    double& comp, const double& comp25, const double& gas, double* leaftempsh, double& numerator, const double& svvmax,
+    const double& hdvmax, const double& havmax, double& denominator, const double& vmax25, double& vmax, const double& svjmax,
+    const double& hdjmax, const double& hajmax, double& jmax, const double& jmax25, const double& kc25, const double& ko25,
+    double& kc, double& ko, double& rday25, double* rdaysh, double& ci, double& jact, const double& qmax,  const double& qsh,
+    const double& lightcurv, double& je, const double& oa, double& jc, double& var, const double& thetac, const double& ca,
+    double* psynsh, double* cinsh, double& marker, double& psynmaxsh, long& p, const std::string& night){
+    //'get g from D and e
+    if (lavpdsh[p] == 0){ //if//
+        gcanwsh[p] = gmax; //'set to maximum if no vpd
+    } else {
+        gcanwsh[p] = eplantl[p] / lavpdsh[p]; //'gcanopy in mmol m-2s-1 (leaf area)
+    } //End if//
+    //'gcanwsh[p] = eplantl[p] / lavpdsh[p] //'gcanopy in mmol m-2s-1 (leaf area)
+    gcancsh[p] = (gcanwsh[p] / 1.6) * 1000; //'convert to CO2 conductance in umol m-2 s-1
+    //'adjust photosynthetic inputs for Tleaf
+    comp = comp25 * exp((37830 * ((leaftempsh[p] + 273.15) - 298.15)) / (298.15 * gas * (leaftempsh[p] + 273.15))); //'Bernacchi via Medlyn
+    numerator = (1 + exp((svvmax * 298.2 - hdvmax) / (gas * 298.2))) * exp((havmax / (gas * 298.2)) * (1 - 298.2 / (273.2 + leaftempsh[p])));
+    denominator = 1 + exp((svvmax * (273.2 + leaftempsh[p]) - hdvmax) / (gas * (273.2 + leaftempsh[p])));
+    vmax = vmax25 * numerator / denominator; //'vmax corrected via Leunig 2002
+    numerator = (1 + exp((svjmax * 298.2 - hdjmax) / (gas * 298.2))) * exp((hajmax / (gas * 298.2)) * (1 - 298.2 / (273.2 + leaftempsh[p])));
+    denominator = 1 + exp((svjmax * (273.2 + leaftempsh[p]) - hdjmax) / (gas * (273.2 + leaftempsh[p])));
+    jmax = jmax25 * numerator / denominator; //'jmax corrected via Leunig 2002
+    kc = kc25 * exp((79430 * ((leaftempsh[p] + 273.15) - 298.15)) / (298.15 * gas * (leaftempsh[p] + 273.15))); //'Bernacchi via Medlyn
+    ko = ko25 * exp((36380 * ((leaftempsh[p] + 273.15) - 298.15)) / (298.15 * gas * (leaftempsh[p] + 273.15))); //'Bernacchi via Medlyn
+    rday25 = vmax25 * 0.01; //'from Medlyn 2002
+    rdaysh[p] = rday25 * pow(2, ((leaftempsh[p] - 25) / 10.0));
+    rdaysh[p] = rdaysh[p] * pow((1 + exp(1.3 * (leaftempsh[p] - 55))), -1); //'high temp inhibition, collatz
+    if (night == "n" && gcancsh[p] > 0) { //if// //'solve for A and ci
+        if (p == 1) { //if// //'first find the mitochondrial compensation point
+            ci = comp - 0.00000001; //'start at photorespiratory compensation point
+            do{//'loop through A-ci curve to find mitochondrial compensation point
+                ci = ci + 0.00000001;
+                jact = ((qmax * qsh + jmax) - pow((pow((-qmax * qsh - jmax), 2) - 4 * lightcurv * qmax * qsh * jmax), 0.5)) / (2 * lightcurv); //'0.9 is curvature of light response curve...this from Medlyn 2002
+                je = (jact * (ci - comp)) / (4 * (ci + 2 * comp)); //'light limited PS
+                numerator = vmax * (ci - comp);
+                denominator = ci + kc * (1 + oa / ko);
+                jc = numerator / denominator; //'rubisco limited A, umol m-2 s-1
+                var = (je + jc - pow((pow((je + jc), 2) - 4 * thetac * je * jc), 0.5)) / (2 * thetac); //'gross photosynthetic rate, gets larger with ci
+                var = var - rdaysh[p]; //'convert gross to NET A
+            } while (!(var >= 0 || ci >= ca));
+            //Loop Until var >= 0 Or ci >= ca //'there//'s positive Anet
+            psynsh[p] = var; //'always start with zero or above
+            cinsh[p] = ci; //'the dark compensation point...not predicting negative Anet
+        } //End if// //'p=0 if
+        if (p > 1) { //if//
+            ci = cinsh[p - 1]; //'start from previous ci
+            do{//'loop through A-ci curve to find mitochondrial compensation point
+                ci = ci + 0.00000001;
+                marker = gcancsh[p] * (ca - ci); //'marker is NET A from g (in umol m-2s-1, need to convert ca-ci to mole fraction), gets smaller as ci increase
+                jact = ((qmax * qsh + jmax) - pow((pow((-qmax * qsh - jmax), 2) - 4 * lightcurv * qmax * qsh * jmax), 0.5)) / (2 * lightcurv); //'0.9 is curvature of light response curve...this from Medlyn 2002
+                je = (jact * (ci - comp)) / (4 * (ci + 2 * comp)); //'light limited PS
+                numerator = vmax * (ci - comp);
+                denominator = ci + kc * (1 + oa / ko);
+                jc = numerator / denominator; //'rubisco limited A, umol m-2 s-1
+                var = (je + jc - pow((pow((je + jc), 2) - 4 * thetac * je * jc), 0.5)) / (2 * thetac); //'gross photosynthetic rate, gets larger with ci
+                var = var - rdaysh[p]; //'convert gross to NET A
+            } while (!(var >= marker || ci >= ca));
+            //Loop Until var >= marker Or ci >= ca //'when "a-ci" value just reaches the "g" value, that//'s the right ci...
+            psynsh[p] = var; //'net assimilation, umol m-2 leaf area s-1
+            if (psynsh[p] > psynmaxsh){
+                psynmaxsh = psynsh[p];
+            }
+            cinsh[p] = ci; //'store ci
+        } //End if// //'p>1 if
+    } else { //'it//'s night
+        if (night == "y") {
+            psynsh[p] = 0 - rdaysh[p];
+            psynmaxsh = 0;
+            cinsh[p] = ca; //'respiration accounted for at night
+        }
+        if (night == "n") {
+            psynsh[p] = 0;
+            psynmaxsh = 0;
+            cinsh[p] = ca; //'it//'s day and p=0, g=0
+        }
+    } //End if// //'night if
+}
+
+// gets virgin assimilation for shade leaves for midday solution
+void cassimilation::get_assimilationshademd(double& lavpdshmd, double& gcanwshmd, const double& gmax, double& emd, double& gcancshmd,
+    double& comp, const double& comp25, const double& gas, double& leaftshmd, double& numerator, const double& svvmax,
+    const double& hdvmax, const double& havmax, double& denominator, const double& vmax25, double& vmax, const double& svjmax,
+    const double& hdjmax, const double& hajmax, double& jmax, const double& jmax25, const double& kc25, const double& ko25,
+    double& kc, double& ko, double& rday25, double& rdayshmd, double& ci, double& jact, const double& qmax,  const double& qsh,
+    const double& lightcurv, double& je, const double& oa, double& jc, double& var, const double& thetac, const double& ca,
+    double* psynshmd, double& cinshmd, double& marker, double& psynmaxshmd, long& p, const std::string& night){//'get g from D and e
+    if (lavpdshmd == 0){
+        gcanwshmd = gmax; //'set to maximum if no vpd
+    } else {
+        gcanwshmd = emd / lavpdshmd; //'gcanopy in mmol m-2s-1 (leaf area)
+    }
+    //'gcanwsh(p) = eplantl(p) / lavpdsh(p) //'gcanopy in mmol m-2s-1 (leaf area)
+    gcancshmd = (gcanwshmd / 1.6) * 1000; //'convert to CO2 conductance in umol m-2 s-1
+    //'adjust photosynthetic inputs for Tleaf
+    comp = comp25 * exp((37830 * ((leaftshmd + 273.15) - 298.15)) / (298.15 * gas * (leaftshmd + 273.15))); //'Bernacchi via Medlyn
+    numerator = (1 + exp((svvmax * 298.2 - hdvmax) / (gas * 298.2))) * exp((havmax / (gas * 298.2)) * (1 - 298.2 / (273.2 + leaftshmd)));
+    denominator = 1 + exp((svvmax * (273.2 + leaftshmd) - hdvmax) / (gas * (273.2 + leaftshmd)));
+    vmax = vmax25 * numerator / denominator; //'vmax corrected via Leunig 2002
+    numerator = (1 + exp((svjmax * 298.2 - hdjmax) / (gas * 298.2))) * exp((hajmax / (gas * 298.2)) * (1 - 298.2 / (273.2 + leaftshmd)));
+    denominator = 1 + exp((svjmax * (273.2 + leaftshmd) - hdjmax) / (gas * (273.2 + leaftshmd)));
+    jmax = jmax25 * numerator / denominator; //'jmax corrected via Leunig 2002
+    kc = kc25 * exp((79430 * ((leaftshmd + 273.15) - 298.15)) / (298.15 * gas * (leaftshmd + 273.15))); //'Bernacchi via Medlyn
+    ko = ko25 * exp((36380 * ((leaftshmd + 273.15) - 298.15)) / (298.15 * gas * (leaftshmd + 273.15))); //'Bernacchi via Medlyn
+    rday25 = vmax25 * 0.01; //'from Medlyn 2002
+    rdayshmd = rday25 * pow(2, ((leaftshmd - 25) / 10.0));
+    rdayshmd = rdayshmd * pow((1 + exp(1.3 * (leaftshmd - 55))), -1); //'high temp inhibition, collatz
+    if (night == "n" && gcancshmd > 0){ //'solve for A and ci
+        if (p == 1) { //'first find the mitochondrial compensation point
+            ci = comp - 0.00000001; //'start at photorespiratory compensation point
+            do{//'loop through A-ci curve to find mitochondrial compensation point
+                ci = ci + 0.00000001;
+                jact = ((qmax * qsh + jmax) - pow((pow((-qmax * qsh - jmax), 2) - 4 * lightcurv * qmax * qsh * jmax), 0.5)) / (2 * lightcurv); //'0.9 is curvature of light response curve...this from Medlyn 2002
+                je = (jact * (ci - comp)) / (4 * (ci + 2 * comp)); //'light limited PS
+                numerator = vmax * (ci - comp);
+                denominator = ci + kc * (1 + oa / ko);
+                jc = numerator / denominator; //'rubisco limited A, umol m-2 s-1
+                var = (je + jc - pow((pow((je + jc), 2) - 4 * thetac * je * jc), 0.5)) / (2 * thetac); //'gross photosynthetic rate, gets larger with ci
+                var = var - rdayshmd; //'convert gross to NET A
+            } while (!(var >= 0 || ci >= ca));
+            //Loop Until var >= 0 Or ci >= ca //'there's positive Anet
+            psynshmd[p] = var; //'always start with zero or above
+            cinshmd = ci; //'the dark compensation point...not predicting negative Anet
+        } //'p=1 if
+        if (p > 1){
+            ci = cinshmd - 0.00000001; //'start from previous ci backed off a bit
+            do{//'loop through A-ci curve to find mitochondrial compensation point
+                ci = ci + 0.00000001;
+                marker = gcancshmd * (ca - ci); //'marker is NET A from g (in umol m-2s-1, need to convert ca-ci to mole fraction), gets smaller as ci increase
+                jact = ((qmax * qsh + jmax) - pow((pow((-qmax * qsh - jmax), 2) - 4 * lightcurv * qmax * qsh * jmax), 0.5)) / (2 * lightcurv); //'0.9 is curvature of light response curve...this from Medlyn 2002
+                je = (jact * (ci - comp)) / (4 * (ci + 2 * comp)); //'light limited PS
+                numerator = vmax * (ci - comp);
+                denominator = ci + kc * (1 + oa / ko);
+                jc = numerator / denominator; //'rubisco limited A, umol m-2 s-1
+                var = (je + jc - pow((pow((je + jc), 2) - 4 * thetac * je * jc), 0.5)) / (2 * thetac); //'gross photosynthetic rate, gets larger with ci
+                var = var - rdayshmd; //'convert gross to NET A
+            } while (!(var >= marker || ci >= ca));
+            //Loop Until var >= marker Or ci >= ca //'when "a-ci" value just reaches the "g" value, that's the right ci...
+            psynshmd[p] = var; //'net assimilation, umol m-2 leaf area s-1
+            if (psynshmd[p] > psynmaxshmd){
+                psynmaxshmd = psynshmd[p];
+            }
+            cinshmd = ci; //'store ci
+        } //'p>1 if
+    } else {//'it's night
+        if (night == "y"){
+            psynshmd[p] = 0 - rdayshmd;
+            psynmaxshmd = 0; //'respiration accounted for at night
+        }
+        if (night == "n"){
+            psynshmd[p] = 0;
+            psynmaxshmd = 0; //'it's day and p=0, g=0
+        }
+    } //'night if
+    //'Cells(16 + p, 65) = psynsh(p)
+}

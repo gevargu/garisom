@@ -28,7 +28,6 @@
 class MainProgram
 {
 public:
-    
     // Define classess for each module
     IOHandler dSheet;
     CSVRow dataHeaderRow;
@@ -156,8 +155,8 @@ public:
     long gs_ar_years[100], gs_ar_starts[100], gs_ar_ends[100], growSeasonCount;
     double gs_ar_Ca[100];
     // used in Pcrit calculations
-    std::string failspot, layerfailure[6];
-    long failure, layer[6];
+    std::string failspot, layerfailure[6], tlayerfailure[6];
+    long failure, layer[6], tlayer[6];
     double pcritrh[6], erh[6][100001], krh[6][100001];// rhizosphere
     double pcritr[6], kr[6][100001], er[6][100001],er_v[6][100001], kr_v[6][100001], tkr[6][100001], ter[6][100001];// roots
     double pcrits, ksh, es[100001], es_v[100001], tes[100001]; // stems
@@ -174,7 +173,7 @@ public:
             swclimit[6], rain, waternew, waterchange, soilevap, transpirationtree, cinc, atree, prinitial;
     // time-step counter
     long dd, halt,haltsh, o, chalk, p, skip, check, d;
-    double tod, timestep, psynmax, psynmaxsh;
+    double tod, timestep, psynmax, psynmaxsh, psynmaxmd, psynmaxshmd;
     // solar calculations
     std::string night;
     double fet, et, sm, tsn, sindec, dec, cosdec, tim, coszen, zen, cosaz,
@@ -187,8 +186,27 @@ public:
         aamax, jmatrix[7][7],vv[7], dum, indx[7], func[7], frt, dfrdpr, dfrhdprh[7],
         dfrdprh[7], dfrhdpr[7], threshold, initialthreshold, ps, pl;
     long imax, ii, ll, weird, ticks, test;
-    // photosynthesis
-    //double ;
+    // composite curves
+    double kroot[6][100001], kleaf[100001], kstem[100001], kplant[100001],
+        pstem[100001], proot[100001], pleaf[100001], eplant[100001], dedp[100001], dedpf[1000001],
+        ecritsystem, prhizo[6][100001], gcmdsh;
+    long total, totalv;
+    // canopy pressure
+    double dedplmin,pleafv[1000001], predawn, plold, dedplzero, dedpl, klossv[1000001],
+        leaftshmd, lavpdshmd, maxkloss, dpmax, dpamax, amaxmax, dpamin,amaxfrac[100001],
+        dpa[100001], rmean, md, dpasun, mdsh, amaxfracsh[100001], transpiration,
+        psynact,gcmd, transpirationsh,psynactsh,lavpdmdsh, cincsh;
+    // leaf energy balance functions
+    double eplantl[1000001],numerator,denominator,leaftemp[100001],lavpd[100001],rabs,lambda,
+        grad,gha,leaftempsh[100001],lavpdsh[100001], leaftmd, lavpdmd;
+    // photosynthesis functions
+    double gcanw[100001], gcanc[100001], comp, rday25, rday[100001], ci, jact, je, jc, var,
+        psyn[100001], cin[1000001], marker, vmax, kc, ko, jmax, gcanwsh[100001], gcancsh[100001],
+        rdaysh[100001], psynsh[100001], cinsh[100001], gcanwmd, emd, gcancmd, rdaymd, psynmd[100001],
+        cinmd, gcanwshmd, gcancshmd,psynshmd[100001], cinshmd, rdayshmd;
+    // e(p) curve resetting
+    long phigh;
+    
     /* Model outputs*/
     // time-step file columns
     long dColYear, dColDay, dColTime, dColSolar, dColWind, dColRain, dColTAir, dColTSoil, dColD;

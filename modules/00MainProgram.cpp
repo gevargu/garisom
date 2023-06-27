@@ -1179,103 +1179,136 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
             break;//Exit do
         } 
         
-        //compositecurve(); //'stores the entire composite curve
-        //'if skip = 0 { //if//
-        //leaftemps(); //'gets sun layer leaf temperature from energy balance
-        //leaftempsshade(); //'gets shade layer leaf temperature
-        //assimilation(); //'gets sun layer photosynthesis
-        //assimilationshade(); //'gets shade layer photosynthesis
+        hydraulicscalculator.get_compositecurve(elayer,prh,prhizo,plow,p1,pinc,elow,er,
+            klow,kr,ehigh,khigh,estart,klower,p2,efinish,kupper,flow,pr,kroot,x,pd,root_b,
+            root_c,ksatr,kminroot,pcritrh,proot,pstem,ps,pleaf,pl,kleaf,kstem,kplant,
+            kminleaf,kminstem,kminplant,e,pgrav,leaf_b,leaf_c,ksatl,stem_b,stem_c,ksats,eplant,
+            einc,dedp,dedpf,pcritsystem,ecritsystem,k,p,layer,test,total,layers,
+            refilling,layerfailure); //'stores the entire composite curve //if skip = 0 { //if//
+        
+    //     // gets sun layer leaf temperature from energy balance
+    //     photosyncalculator.get_leaftemps(rabs,ssun,sref,emiss,la,lg,lambda,airtemp,grad,gha,wind,
+    //         leafwidth,laperba,eplantl,eplant,numerator,denominator,sbc,sha,leaftemp,lavpd,
+    //         patm,vpd,p);
+    //     // gets shade layer leaf temperature
+    //     photosyncalculator.get_leaftempsshade(rabs,sshade,sref,emiss,lg,numerator,sbc,
+    //         airtemp,lambda,eplantl,denominator,sha,grad,gha,leaftempsh,lavpdsh,patm,
+    //         vpd,p);
+    //     // gets sun layer photosynthesis
+    //     photosyncalculator.get_assimilation(lavpd,gcanw,gmax,eplantl,gcanc,comp25,comp,gas,leaftemp,
+    //         numerator,svvmax,hdvmax,havmax,denominator,vmax25,vmax,svjmax,hdjmax,hajmax,jmax,jmax25,
+    //         kc25,ko25,kc,ko,rday25,rday,ci,jact,qmax,qsl,lightcurv,je,oa,jc,var,thetac,ca,psyn,cin,
+    //         marker,psynmax,p,night);
+    //     // gets shade layer photosynthesis
+    //     photosyncalculator.get_assimilationshade(lavpdsh,gcanwsh,gmax,eplantl,gcancsh,comp,comp25,gas,
+    //         leaftempsh,numerator,svvmax,hdvmax,havmax,denominator,vmax25,vmax,svjmax,hdjmax,hajmax,jmax,
+    //         jmax25,kc25,ko25,kc,ko,rday25,rdaysh,ci,jact,qmax,qsh,lightcurv,je,oa,jc,var,thetac,ca,psynsh,
+    //         cinsh,marker,psynmaxsh,p,night);
     } while (!(sum == layers || test == 1 || night == "y" && (dd > 1 && !isNewYear) || check >= 500)); //'loop to complete failure unless it//'s night
 
-    // if (chalk > 0) { //if//
-    //     weird = 0; //'done our best
-    //     failspot = "convergence";
-    //     for (z = 1; z <= layers; z++) {//z = 1 To layers //'restore layers to functioning if they//'ve been turned off by convergence failure
-    //         if (kminroot[z] != 0) {
-    //            layer[z] = 0;
-    //         }
-    //     } //end for z
-
-    //     goto fortyMarker; //'got as much of the composite curve as is going to happen
-    // } //End if//
+    if (chalk > 0) { //if//
+        weird = 0; //'done our best
+        failspot = "convergence";
+        for (z = 1; z <= layers; z++) {//z = 1 To layers //'restore layers to functioning if they//'ve been turned off by convergence failure
+            if (kminroot[z] != 0) {
+               layer[z] = 0;
+            }
+        } //end for z
+        goto fortyMarker; //'got as much of the composite curve as is going to happen
+    } //End if//
     
-    // if (dd == 1 || isNewYear || night == "n") { //if//
+    if (dd == 1 || isNewYear || night == "n") { //if//
+        if (check >= 500) { //if// //'try once more //'Stop
+            chalk = chalk + 1;
+            if (ecritsystem == 0) {
+                einc = ksatp / 500.0;
+                std::cout << "ecritsystem is zero... try resetting to ksatp/500, dd = " << dd << std::endl;
+            }
+            goto twentyMarker;
+        } //End if//
 
-    //     if (check >= 500) { //if// //'try once more //'Stop
-    //         chalk = chalk + 1;
-    //         if (ecritsystem == 0) {
-    //             einc = ksatp / 500.0;
-    //             std::cout << "ecritsystem is zero... try resetting to ksatp/500, dd = " << dd << std::endl;
-    //         }
-    //         goto twentyMarker;
-    //     } //End if//
+        if (total > 500 || total < 400) { //if//
+            einc = ecritsystem / 450.0; //'re-set Einc
+            if (ecritsystem == 0) {
+                einc = ksatp / 500.0;
+                std::cout << "ecritsystem is zero... try resetting to ksatp/500, dd = " << dd << std::endl;
+            }
+            testCount++; // [DEBUG]
+            if (testCount > 10) {
+                testCount = 0;
+                goto fortyMarker;
+            }
+            goto twentyMarker; //'recalculate the composite curve
+        } //End if// //'total ok
+    } //End if// //'night <>"n" or it//'s not the first round
 
-    //     if (total > 500 || total < 400) { //if//
-    //         einc = ecritsystem / 450.0; //'re-set Einc
-    //         if (ecritsystem == 0) {
-    //             einc = ksatp / 500.0;
-    //             std::cout << "ecritsystem is zero... try resetting to ksatp/500, dd = " << dd << std::endl;
-    //         }
-    //         testCount++; // [DEBUG]
-    //         if (testCount > 10) {
-    //             testCount = 0;
-    //             goto fortyMarker;
-    //         }
-    //         goto twentyMarker; //'recalculate the composite curve
-    //     } //End if// //'total ok
-    // } //End if// //'night <>"n" or it//'s not the first round
+    fortyMarker:
 
-    // fortyMarker:
-
-    // bool isNight = true;
-    // if (night == "n"){
-    //     isNight = false;
-    // }
+    bool isNight = true;
+    if (night == "n"){
+        isNight = false;
+    }
     // if (night == "n" && psynmax > 0 && psynmaxsh > 0 && weird == 0) { //if//
-    //     //DoEvents //'[HNT] this was required to prevent a hard lock -- this portion of the loop is the most intensive, so let Excel take a "breath" by processing system events to prevent lockup
-    //     canopypressure(); //'returns canopy P and associated output
+    // //DoEvents //'[HNT] this was required to prevent a hard lock -- this portion of the loop is the most intensive, so let Excel take a "breath" by processing system events to prevent lockup
+    //     hydraulicscalculator.get_canopypressure(ecritsystem,ter,er,kr,tkr,er_v,kr_v,tes,es,es_v,tel,el,el_v,
+    //         kminroot,sum,prh,pd,pcritr,pr,psynmaxmd,psynmaxshmd,e,einc,dedplmin,ksatp,jmatrix,frt,dfrdpr,
+    //         pcritrh,p1,p2,plow,pinc,elow,erh,klow,krh,ehigh,khigh,estart,klower,efinish,kupper,flow,func,
+    //         dfrhdprh,dfrhdpr,dfrdprh,threshold,initialthreshold,aamax,vv,dum,indx,pcrits,waterold,
+    //         gs_ar_nrFailConverge_Water,gs_ar_nrFailConverge_WaterMax,pgrav,ps,pl,pcritl,pleafv,predawn,
+    //         plold,dedplzero,dedpl,klossv,pcritsystem,rabs,ssun,sref,emiss,la,lg,lambda,airtemp,grad,gha,wind, 
+    //         leafwidth,emd,laperba,sbc,numerator,denominator,sha,leaftmd,lavpdmd,patm,vpd,sshade,leaftshmd,
+    //         lavpdshmd,gcanwmd,gmax,gcancmd,comp,comp25,gas,svvmax,havmax,hdvmax,vmax25,vmax,svjmax,hdjmax,hajmax,
+    //         jmax,jmax25,kc25,ko25,kc,ko,rday25,rdaymd,ci,jact,qmax,qsl,lightcurv,je,oa,jc,var,thetac,ca,psynmd,
+    //         cinmd,marker,gcanwshmd,gcancshmd,rdayshmd,qsh,psynshmd,cinshmd,maxkloss,dpmax,dpamax,amaxmax,dpamin,
+    //         amaxfrac,dpa,rmean,md,lavpd,dpasun,mdsh,amaxfracsh,lavpdsh,pleaf,eplantl,transpiration,psynact,psyn,
+    //         gcmd,gcanw,cinc,cin,transpirationsh,psynactsh,psynsh,gcmdsh,gcanwsh,lavpdmdsh,cincsh,cinsh,kminstem,
+    //         kminleaf,kroot,kstem,kleaf,k,layer,tlayer,t,failure,test,p,gs_ar_nrFailConverge,weird,check,ticks,
+    //         unknowns,d,imax,ii,ll,gs_yearIndex,dd,totalv,runmean,total,cutoff,halt,haltsh,layers,layerfailure,
+    //         tlayerfailure,failspot,night,refilling); //'returns canopy P and associated output
     //                        //'if check >= 2000 { //if// GoTo 60:
-    //     if (refilling == "n") {
-    //         updatecurves(); //'updates element E(P) curves as required for midday exposure for no refilling
+    //     if (refilling == true) {
+    //         hydraulicscalculator.update_curves(kroot,kminroot,pinc,proot,er,kr,kstem,kminstem,pstem,es,kleaf,
+    //             kminleaf,pleaf,el,halt,phigh,layers); //'updates element E(P) curves as required for midday exposure for no refilling
     //     }
     // } //End if// //'night <> "n", psynmax IF
 
-    // if (soilred == "y") { //if//
+    if (soilred == true) { //if//
+       //soilcalculator.get_soilflow();
     //     soilflow(); //'gets vertical soil flow between layers in m3/m2
-    // } else {
-    //     for (z = 0; z <= layers; z++) {//z = 0 To layers
-    //         soilredist[z] = 0;
-    //     } //end for z
-    // } //End if// //'soil red <> y
+    } else {
+        for (z = 0; z <= layers; z++) {//z = 0 To layers
+            soilredist[z] = 0;
+        } //end for z
+    } //End if// //'soil red <> y
     
-    // if (ground == "y") {
+    if (ground == true) {
     //     deepflow(); //'gets groundwater flow into bottom layer in m3/m2
-    // } //End if// //'pet <> y or n
+    } //End if// //'pet <> y or n
     
-    // if (gs_inGrowSeason && sevap == "y") { //if//
+    if (gs_inGrowSeason && sevap == true) { //if//
     //     soilevaporation(); //'gets soil evaporation rate
-    // } else {
-    //     soilevap = 0;
-    // } //End if//
+    } else {
+        soilevap = 0;
+    } //End if//
 
-    // if (failure == 0 || weird == 1) { //if// //Debug.Print "DOING A LOOP-8 " & dd
-    //     if (night == "y" || psynmax == 0 || psynmaxsh == 0) { //if// //'set everything to starting point
-    //         k = 0;
-    //         transpiration = eplantl[k]; //'all gas exchange values are for closed stomata
-    //         md = pleaf[k];
-    //         psynact = psyn[k];
-    //         gcmd = gcanw[k]; //'g for water in mmol
-    //         lavpdmd = lavpd[k] * patm;
-    //         cinc = cin[k];
-    //         halt = k;
-    //         transpirationsh = eplantl[k]; //'all gas exchange values are from most recent historical values
-    //         mdsh = pleaf[k];
-    //         psynactsh = psynsh[k];
-    //         gcmdsh = gcanwsh[k]; //'g for water in mmol
-    //         lavpdmdsh = lavpdsh[k] * patm;
-    //         cincsh = cinsh[k];
-    //         haltsh = k; //'halt is index of midday datum
-    //     } //End if// //'night<>y
+    if (failure == 0 || weird == 1) { //if// //Debug.Print "DOING A LOOP-8 " & dd
+        if (night == "y" || psynmax == 0 || psynmaxsh == 0) { //if// //'set everything to starting point
+            k = 0;
+            transpiration = eplantl[k]; //'all gas exchange values are for closed stomata
+            md = pleaf[k];
+            psynact = psyn[k];
+            gcmd = gcanw[k]; //'g for water in mmol
+            lavpdmd = lavpd[k] * patm;
+            cinc = cin[k];
+            halt = k;
+            transpirationsh = eplantl[k]; //'all gas exchange values are from most recent historical values
+            mdsh = pleaf[k];
+            psynactsh = psynsh[k];
+            gcmdsh = gcanwsh[k]; //'g for water in mmol
+            lavpdmdsh = lavpdsh[k] * patm;
+            cincsh = cinsh[k];
+            haltsh = k; //'halt is index of midday datum
+        } //End if// //'night<>y
 
     //     dSheet.Cells(rowD + dd, colD + o + dColF_predawn) = pleaf[0]; //'the predawn
     //     //'SUN LAYER OUTPUT
@@ -1363,7 +1396,7 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
     //         }
     //     } //end for z
     //     //Debug.Print "DOING A LOOP-9 " & dd
-    // } //End if// //'failure IF (basically...failure can//'t happen!)
+    } //End if// //'failure IF (basically...failure can//'t happen!)
 
 
     if (dd == 1 || isNewYear) { //if// //'NOTE: must be sure that pcritsystem is computed for dd=1!!! (i.e., it//'s not computed at night)
@@ -1543,7 +1576,7 @@ long MainProgram::Rungarisom(){
 
             /* if we're running without growing season limits, we need to record the "end of GS" water content now
             because we did not complete the previous timestep, back up 1 more to grab a value */
-            
+
         }
 
     } while (!(dataCells[rowD + 1 + dd][colD + dColDay] < 0.01));
