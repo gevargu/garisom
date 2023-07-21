@@ -4638,7 +4638,6 @@ public:
          drainage = 0; //drainage from bottom of root zone
       } //End if
 
-
         //if kmaxset = False Or leafpercentset = False { dd = 0 //start with initializing row
         //if kmaxset = True And leafpercentset = True { dd = 1 //skip initializing row
         //dd = 0
