@@ -1,11 +1,11 @@
 // For data inputs // these numbers are arbitrary for the most part, but ensure enough memory
 #define MAX_SUMMARY_COLS 121
 #define MAX_SUMMARY_ROWS 2001
-#define PARAMFILE_MAXROWS 101
+#define PARAMFILE_MAXROWS 2001
 #define PARAMFILE_MAXCOLS 101
 #define DATAFILE_MAXROWS 2000001
 #define DATAFILE_MAXCOLS 101
-#define CONFIGFILE_MAXROWS 3
+#define CONFIGFILE_MAXROWS 10
 #define CONFIGFILE_MAXCOLS 30
 
 // For staging the model

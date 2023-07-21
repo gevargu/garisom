@@ -29,11 +29,11 @@ public:
                 double& s, long& it, long& tnm, double& del, double& x, double& sum);
         void qtrapwbr(double& olds, long& t, double& p1, double& p2, const double& b, const double& c,double* ksatr, 
                 const int& z, double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx);
-        void get_rootPcrit(double er[][100001],double kr[][100001],long& z, const int& layers,double* ksatr, double& p1, 
+        void get_rootPcrit(double er[6][100001],double kr[6][100001],long& z, const long& layers,double* ksatr, double& p1, 
                 double& p2, const double& pinc,long& k,double& e,double& olds, long& t, const double& b, const double& c, 
                 double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx, 
                 const double& kmin,double* pcritr);
-        void get_rootPcrit_v(double er_v[][100001],double kr_v[][100001],long& z, const int& layers,double* ksatr, double& p1, 
+        void get_rootPcrit_v(double er_v[6][100001],double kr_v[6][100001],long& z, const long& layers,double* ksatr, double& p1, 
                 double& p2, const double& pinc,long& k,double& e,double& olds, long& t, const double& b, const double& c, 
                 double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx, 
                 const double& kmin,double* pcritr);
@@ -57,7 +57,7 @@ public:
                 long* gs_ar_nrFailConverge, double* gs_ar_nrFailConverge_Water, double* gs_ar_nrFailConverge_WaterMax,
                 long& weird, long& check, long* layer, long& k, long& ticks, long& unknowns,
                 long& d, long& imax, long& ii,long& ll, long& gs_yearIndex, long& dd,
-                int& layers, std::string* layerfailure, std::string& failspot);
+                long& layers, std::string* layerfailure, std::string& failspot);
         
         // stem block
         double get_stempercent(double leafpercent);
@@ -98,13 +98,13 @@ public:
                 double* kstem, double* kplant, double& kminleaf, double& kminstem, double& kminplant, double& e, double& pgrav,
                 const double& leaf_b, const double& leaf_c, double& ksatl, const double& stem_b, const double& stem_c, double& ksats, double* eplant,
                 double& einc, double* dedp, double* dedpf, double& pcritsystem, double& ecritsystem, long& k, long& p, long* layer,
-                long& test, long& total, const int& layers, const bool& refilling, std::string* layerfailure);
+                long& test, long& total, const long& layers, const bool& refilling, std::string* layerfailure);
         void storehistory(double ter[6][100001], double er[6][100001], double kr[6][100001], double tkr[6][100001],
                 double er_v[6][100001], double kr_v[6][100001], double* tes, double* es, double* es_v, double* tel,
-                double* el, double* el_v, double* kminroot, long& k, long* layer, long* tlayer, int& layers,
+                double* el, double* el_v, double* kminroot, long& k, long* layer, long* tlayer, long& layers,
                 std::string* layerfailure, std::string* tlayerfailure);
         void gethistory(double ter[6][100001], double er[6][100001], double kr[6][100001], double tkr[6][100001], double* tes,
-                double* es, double* tel, double* el, long& k, long* layer, long* tlayer, int& layers,
+                double* es, double* tel, double* el, long& k, long* layer, long* tlayer, long& layers,
                 std::string* layerfailure, std::string* tlayerfailure);
         void get_canopypressure(const double& ecritsystem, double ter[6][100001], double er[6][100001], double kr[6][100001],
                 double tkr[6][100001], double er_v[6][100001], double kr_v[6][100001], double* tes, double* es, double* es_v, double* tel,
@@ -133,11 +133,11 @@ public:
                 long& k, long* layer, long* tlayer, long& t, long& failure, long& test, long& p, long* gs_ar_nrFailConverge, long& weird, long& check,
                 long& ticks, long& unknowns, long& d, long& imax, long& ii,long& ll, long& gs_yearIndex, long& dd, long& totalv,
                 const long& runmean, long& total, const double& cutoff, long& halt, long haltsh,
-                int& layers, std::string* layerfailure, std::string* tlayerfailure, std::string& failspot, const std::string& night,
+                long& layers, std::string* layerfailure, std::string* tlayerfailure, std::string& failspot, const std::string& night,
                 const bool& refilling);
         void update_curves(double kroot[6][100001],double* kminroot, const double& pinc, double* proot,double er[6][100001],
                 double kr[6][100001], double* kstem, double& kminstem, double* pstem, double* es, double* kleaf, double& kminleaf,
-                double* pleaf, double* el,long& halt, long& phigh, const int& layers);
+                double* pleaf, double* el,long& halt, long& phigh, const long& layers);
 };
 
 #endif

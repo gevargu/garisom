@@ -86,7 +86,7 @@ void hydraulics::qtrapwbr(double& olds, long& t, double& p1, double& p2, const d
 }
 
 // root E(P) curves
-void hydraulics::get_rootPcrit(double er[6][100001],double kr[6][100001],long& z, const int& layers,double* ksatr, double& p1,
+void hydraulics::get_rootPcrit(double er[6][100001],double kr[6][100001],long& z, const long& layers,double* ksatr, double& p1,
    double& p2, const double& pinc,long& k,double& e,double& olds, long& t, const double& b, const double& c, double& s,
    long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx, const double& kmin, double* pcritr) { //generates fresh global E(P) curve for the element(erases history)
    
@@ -117,7 +117,7 @@ void hydraulics::get_rootPcrit(double er[6][100001],double kr[6][100001],long& z
    } //endfor// z
 } //endsub//
 
-void hydraulics::get_rootPcrit_v(double er_v[6][100001],double kr_v[6][100001],long& z, const int& layers,double* ksatr,
+void hydraulics::get_rootPcrit_v(double er_v[6][100001],double kr_v[6][100001],long& z, const long& layers,double* ksatr,
    double& p1, double& p2, const double& pinc,long& k,double& e,double& olds, long& t, const double& b, const double& c,
    double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx, const double& kmin,
    double* pcritr) { //generates fresh global E(P) curve for the element(erases history)
@@ -300,7 +300,7 @@ void hydraulics::newtonrhapson(double* kminroot, double& pr, double* pd, double*
    double& aamax, double* vv, double& dum, double* indx, double& pcrits, double& waterold, long* gs_ar_nrFailConverge,
    double* gs_ar_nrFailConverge_Water, double* gs_ar_nrFailConverge_WaterMax, long& weird, long& check, long* layer,
    long& k, long& ticks, long& unknowns, long& d, long& imax, long& ii,long& ll, long& gs_yearIndex, long& dd,
-   int& layers, std::string* layerfailure, std::string& failspot){
+   long& layers, std::string* layerfailure, std::string& failspot){
    //'prinitial = pr //record the original guess
    weird = 0; //tracks pr estimate
    check = 0; //restart loop counter
@@ -731,7 +731,7 @@ void hydraulics::get_compositecurve(double elayer[6][100001], double* prh, doubl
    double* kstem, double* kplant, double& kminleaf, double& kminstem, double& kminplant, double& e, double& pgrav,
    const double& leaf_b, const double& leaf_c, double& ksatl, const double& stem_b, const double& stem_c, double& ksats, double* eplant,
    double& einc, double* dedp, double* dedpf, double& pcritsystem, double& ecritsystem, long& k, long& p, long* layer,
-   long& test, long& total, const int& layers, const bool& refilling, std::string* layerfailure){
+   long& test, long& total, const long& layers, const bool& refilling, std::string* layerfailure){
    elayer[0][p] = 0; //'no root mediated flow in topmost layer
    for (long z = 1; z <= layers; z++){//z = 1 To layers
       if (layer[z] == 0){ //if//
@@ -809,7 +809,7 @@ void hydraulics::get_compositecurve(double elayer[6][100001], double* prh, doubl
 /* stores historical element e(P) curves*/
 void hydraulics::storehistory(double ter[6][100001], double er[6][100001], double kr[6][100001], double tkr[6][100001], double er_v[6][100001],
    double kr_v[6][100001], double* tes, double* es, double* es_v, double* tel, double* el, double* el_v, double* kminroot,
-   long& k, long* layer, long* tlayer, int& layers, std::string* layerfailure, std::string* tlayerfailure){
+   long& k, long* layer, long* tlayer, long& layers, std::string* layerfailure, std::string* tlayerfailure){
    /*memset(ter, 0, sizeof(ter));
    memset(tkr, 0, sizeof(tkr));
    memset(tes, 0, sizeof(tes));
@@ -875,7 +875,7 @@ void hydraulics::storehistory(double ter[6][100001], double er[6][100001], doubl
 
 /* restores historical element e(P) curves*/
 void hydraulics::gethistory(double ter[6][100001], double er[6][100001], double kr[6][100001], double tkr[6][100001], double* tes,
-   double* es, double* tel, double* el, long& k, long* layer, long* tlayer, int& layers,
+   double* es, double* tel, double* el, long& k, long* layer, long* tlayer, long& layers,
    std::string* layerfailure, std::string* tlayerfailure){
    for (long z = 1; z <= layers; z++){
       k = 0;
@@ -936,7 +936,7 @@ void hydraulics::get_canopypressure(const double& ecritsystem, double ter[6][100
    long& k, long* layer, long* tlayer, long& t, long& failure, long& test, long& p, long* gs_ar_nrFailConverge, long& weird, long& check,
    long& ticks, long& unknowns, long& d, long& imax, long& ii,long& ll, long& gs_yearIndex, long& dd, long& totalv,
    const long& runmean, long& total, const double& cutoff, long& halt, long haltsh,
-   int& layers, std::string* layerfailure, std::string* tlayerfailure, std::string& failspot, const std::string& night,
+   long& layers, std::string* layerfailure, std::string* tlayerfailure, std::string& failspot, const std::string& night,
    const bool& refilling){
    cassimilation photosynfunctions;
    //computes carbon-based middays; pressures and cost curve from virgin supply function, gas exchange from historical values
@@ -1226,7 +1226,7 @@ void hydraulics::get_canopypressure(const double& ecritsystem, double ter[6][100
 /* Resets E(P) element curves*/
 void hydraulics::update_curves(double kroot[6][100001],double* kminroot, const double& pinc, double* proot,double er[6][100001],
    double kr[6][100001], double* kstem, double& kminstem, double* pstem, double* es, double* kleaf, double& kminleaf,
-   double* pleaf, double* el,long& halt, long& phigh, const int& layers){
+   double* pleaf, double* el,long& halt, long& phigh, const long& layers){
    //'if k<kmin, re-assign e//'s on element curve by back-calculating
    for (long z = 1; z <= layers; z++){//z = 1 To layers
       if (true){

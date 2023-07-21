@@ -50,6 +50,8 @@ public:
     std::string paramCells[PARAMFILE_MAXROWS][PARAMFILE_MAXCOLS];
     std::string nameTable[PARAMFILE_MAXROWS][PARAMFILE_MAXCOLS]; // needs to be same dimensions as the parameter file "cells"
     const long maxsp = 90;
+    std::string soillayersTable[PARAMFILE_MAXROWS][PARAMFILE_MAXCOLS];
+    
     // Data file
     const long maxYears = 90;
     const long bufferYears = 5; // throw out this many years when calculating optimal BA:GA to avoid the field capacity starting condition influencing the results
@@ -105,12 +107,12 @@ public:
     /* Model parameter file */
     // Site Identifiers & Parameters
     std::string region, siteID, species;
-    double lat, longitude, alt, slope, slope_asp;
+    double lat, longitude, alt, slope, slopeasp;
     // Sky Parameters
     double tau, tsncorr, emiss, ca;
     // Soils Parameters
     std::string texture;
-    int layers;
+    long layers;
     double rockfrac, rhizopercent, ffc, fieldcapfrac,soilabssol, rough, zdispl, zh, pground,grounddistance;
     // Stand-level Parameters
     double baperga, lai, xh, height, pgrav;
@@ -164,11 +166,11 @@ public:
     double pcrits, ksh, es[100001], es_v[100001], tes[100001]; // stems
     double pcritl, el[100001], el_v[100001], tel[100001]; // leaves
     double pcritsystem;
-    // E(P) curves Integration variables 
+    // E(P) curves Integration variables
     long it, tnm, j, tmax;
     double del, eps, olds, p1, p2, e, s;
     // hydraulics
-    double kminroot[6], kminstem, kminleaf,kminplant,kpday1, kxday1;
+    double kminroot[6], kminstem, kminleaf,kminplant,kpday1, kxday1, kplantold;
     // soil variables
     double drainage, gwflow, thetafc[6], thetafracres[6], thetafracfc[6],fc[6], theta, pd[6],prh[6], pr,
             runoff, waterold, water[6], layerflow,elayer[6][100001],laisl,laish, soilredist[6], deficit,
@@ -208,7 +210,13 @@ public:
         cinmd, gcanwshmd, gcancshmd,psynshmd[100001], cinshmd, rdayshmd;
     // e(p) curve resetting
     long phigh;
-    
+    // soil ground water flow and evaporation
+    double store, pend, soilf[6], groundflow, emission, lc, rabssoil, mdensair, soilep, rha,
+        rhs;
+
+    // BA optimization
+    double treeToPhotoLAI;
+
     /* Model outputs*/
     // time-step file columns
     long dColYear, dColDay, dColTime, dColSolar, dColWind, dColRain, dColTAir, dColTSoil, dColD;
@@ -252,7 +260,9 @@ public:
     bool locateRanges();                    // might delete this function
     void readSiteAreaValues();              // TO-DO: incorporate this function into the model or delete
     void componentpcrits();                 // Get critical pressures (Pcrits)
-    long modelTimestepIter(long& VBA_dd);
+    long modelTimestepIter(long& VBA_dd);   // time step iterator
+    void modelProgramNewYear();             // new year parameterization
+    void saveOutputSheet(std::string filename, std::string sheetType);
     long Rungarisom();                      // function to run the program it replaces "modelProgramMain()" (H. Todd)
 };
 

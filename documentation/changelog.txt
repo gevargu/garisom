@@ -1,4 +1,4 @@
-06/14/2022 - "1.0"
+06/14/2022 - "2.0"
 - Creation of a developing branch alongside the new modular version of the model.
 
 11/8/2019 - "0.24"
