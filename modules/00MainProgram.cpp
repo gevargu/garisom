@@ -657,9 +657,9 @@ void MainProgram::InitialConditions(){
             z = 1; //use layer 1 as stand in for whole root system
             ksatr[1] = ksatroot; //set to whole root system
             x = 0.5; //start by finding kmaxrh at 0.5 MPa...a deliberate under-shoot
-            rootr = 1.0 / hydraulicscalculator.get_weibullfitroot(x,root_b,root_c,ksatr,z);
-            rstem = 1.0 / hydraulicscalculator.get_weibullfit(x,stem_b,stem_c,ksats);
-            rleaf = 1.0 / hydraulicscalculator.get_weibullfit(x,leaf_b,leaf_c,ksatl);
+            rootr = 1.0 / get_weibullfitroot(x);
+            rstem = 1.0 / get_weibullfit(x,stem_b,stem_c,ksats);
+            rleaf = 1.0 / get_weibullfit(x,leaf_b,leaf_c,ksatl);
             rplant = rootr + rstem + rleaf; //rplant here is just the xylem part
             rhizor = rplant * (rhizotarg / (1.0 - rhizotarg)); //solve for what rhizor has to be at the target
             
@@ -674,10 +674,10 @@ void MainProgram::InitialConditions(){
                 sum = 0;
                 do{//loop through pressures
                     x = x + 0.1;
-                    rootr = 1.0 / hydraulicscalculator.get_weibullfitroot(x,root_b,root_c,ksatr,z);
-                    rstem = 1.0 / hydraulicscalculator.get_weibullfit(x,stem_b,stem_c,ksats);
-                    rleaf = 1.0 / hydraulicscalculator.get_weibullfit(x,leaf_b,leaf_c,ksatl);
-                    rhizor = 1.0 / soilcalculator.get_vg(a,n,x,kmaxrh,z);
+                    rootr = 1.0 / get_weibullfitroot(x);
+                    rstem = 1.0 / get_weibullfit(x,stem_b,stem_c,ksats);
+                    rleaf = 1.0 / get_weibullfit(x,leaf_b,leaf_c,ksatl);
+                    rhizor = 1.0 / get_vg(x);
                     rplant = rootr + rstem + rleaf + rhizor;
                     rrhizofrac = rhizor / rplant; //fraction of resistance in rhizosphere
                     sum = sum + rrhizofrac; //add up fractions
@@ -1338,35 +1338,1610 @@ bool MainProgram::locateRanges() {
 TO-DO: incorporate this function into the model or delete
 */
 void MainProgram::readSiteAreaValues(){
-   }
+}
 
-// /* Get pcrits */
-void MainProgram::componentpcrits(){ //'gets pcrits
-    soilcalculator.get_rhizoPcrit(z,layers,p1,p2,k,e,erh,krh,pinc,kmin,olds,t,a,n,kmaxrh,s,it,tnm,del,x,sum,pcritrh,j,eps,tmax);
+// Soils module
+// TO-DO: finish pasting these functions to a separate file as its own class
+
+/*Soil hydraulic conductivity*/
+/* Van Genuchten function
+gets soil k
+*/
+double MainProgram::get_vg(double &x) {
+    //vp = 1 / ((a(z) * x) ^ n(z) + 1)
+    //vg = kmaxrh(z) * vp ^ ((n(z) - 1) / (2 * n(z))) * ((1 - vp) ^ ((n(z) - 1) / n(z)) - 1) ^ 2
+    vp = 1 / (pow((a[z] * x), n[z]) + 1);
+    return kmaxrh[z] * pow(vp, ((n[z] - 1) / (2 * n[z]))) * pow((pow((1 - vp), ((n[z] - 1) / n[z])) - 1), 2);
+}
+
+/* Van Genuchten function integration
+integrates VG
+*/
+void MainProgram::trapzdvg(double &p1, double &p2, double &s, long &t){
+    if (t == 1){
+        s = 0.5 * (p2 - p1) * (get_vg(p1) + get_vg(p2));
+        it = 1;
+    } else {
+        tnm = it;
+        del = (p2 - p1) / tnm;
+        x = p1 + 0.5 * del;
+        sum = 0;
+        for (j = 1; j <= it; j++) {
+            sum = sum + get_vg(x);
+            x = x + del;
+        }
+        s = 0.5 * (s + (p2 - p1) * sum / tnm);
+        it = 2 * it;
+    }
+}
+
+/* VG integration accuracy
+evaluates accuracy of van genuchten integration
+*/
+void MainProgram::qtrapvg(double &p1, double &p2, double &s) {
+    eps = 0.001; //fractional refinement threshold for integral
+    tmax = 70; //limit of calls to trapzdvg
+    olds = -1; //starting point unlikely to satisfy if statement below
+    for (t = 1; t <= tmax; t++){
+        trapzdvg(p1, p2, s, t);
+        if (std::abs(s - olds) < eps * std::abs(olds)){
+            return;
+        }
+        olds = s;
+    }
+}
+
+// Soil water status
+/* Soil pressure
+gives soil Y in MPa from soil theta/thetasat=x
+*/
+double MainProgram::rvg(double &x) {
+    //rvg = (x ^ (1 / (1 - 1 / n(z))) + 1) ^ (1 / n(z)) / (x ^ (1 / (n(z) - 1)) * a(z))
+    double aa = pow((pow(x, (1 / (1 - 1 / n[z]))) + 1), (1 / n[z]));
+    double bb = (pow(x, (1 / (n[z] - 1))) * a[z]);
+    return aa / bb;
+}
+
+/* Soil water content
+gives soil water content, theta/thetasat from soil water potential in MPa=x
+*/
+double MainProgram::swc(double &x) {
+    //swc = (1 / (1 + (a(z) * x) ^ n(z))) ^ (1 - 1 / n(z))
+    return pow((1 / (1 + pow((a[z] * x), n[z]))), (1 - 1 / n[z]));
+}
+
+/* Soil wetness
+gets predawns accounting for rain, groundwater flow, transpiration, and redistribution via soil and roots
+*/
+void MainProgram::get_soilwetness() {
+    double tempDouble = 0.0;
+    drainage = 0;
+    runoff = 0;
+    if (dd == 1 || isNewYear) { //if// //'every layer starts at initial % of field capacity
+        if (!(useGSData && gs_yearIndex > 0)){
+            waterold = 0; //'total root zone water content (mmol m-2 ground area)
+            for (z = 0; z <= layers; z++){//z = 0 To layers //'
+                x = 10; //'MPa water potential for getting residual thetafrac
+                thetafracres[z] = swc(x); //'residual thetafrac
+                thetafracfc[z] = (1 - thetafracres[z]) * fieldcapfrac + thetafracres[z]; //'thetafrac at field capacity
+                thetafc[z] = thetasat[z] * thetafracfc[z]; //'water content at field capacity
+            } //for//z //'
+            for (z = 0; z <= layers; z++){//z = 0 To layers
+                water[z] = thetafc[z] * depth[z]; //'field capacity estimated as 1/2 saturated capacity, water content of layer in m3 water per m2 ground area
+                fc[z] = water[z]; //'records field capacity in m3 water volume per m2 ground area.
+                water[z] = ffc * water[z]; //'start off with initial fraction of field capacity
+                //'Cells(16 + dd, 42 + z) = water[z]
+                waterold = waterold + water[z]; //'in m3/m2 ground area
+            } //for//z
+            dataCells[rowD + dd][colD + dColF_End_watercontent] = waterold * 1000; //'root zone water content in mm m-2 ground area
+            //dSheet.Cells(rowD + dd, colD + dColF_End_watercontent) = waterold * 1000; //'root zone water content in mm m-2 ground area
+            //'waterold = waterold * 55555556# //'convert m3 water per ground area to mmol water per ground area
+            // [HNT] starting water now counts as an input
+            gs_ar_input[gs_yearIndex] = gs_ar_input[gs_yearIndex] + waterold * 1000;
+        }
+
+        if (gs_yearIndex == 0){// if it's the first year, store this as the off-season starting water because we don't have a real value
+            gs_ar_waterInitial_OFF[gs_yearIndex] = waterold * 1000;
+        }
+        // store the initial water content to check how much we consume at the end
+        gs_ar_waterInitial[gs_yearIndex] = waterold * 1000;
+        // [/HNT]
+    } //End if// //'dd=1 if
+    //'if pet = "y" Or pet = "n" { //if// //'do the original routine...doesn//'t run for PET scenario
+    if ((dd > 1 && !isNewYear) || (useGSData && gs_yearIndex > 0)) { //if// //'get flows that happened during previous timestep
+        for (z = 0; z < layers; z++){//z = 0 To layers - 1 //'transpiration, root and soil redistribution
+            if (night == "n") { //if// //'it//'s day, must adjust elayer for sun vs. shade weighting
+                layerflow = elayer[z][halt] * laisl / lai + elayer[z][haltsh] * laish / lai; //'weighted flow; NOTE: elayer = 0 for layer 0
+            } else {
+                layerflow = elayer[z][halt]; //'no adjustment necessary at night; NOTE: elayer = 0 for layer 0
+            } //End if// //'night if
+            layerflow = layerflow * baperga * 1.0 / 998.2 * timestep; //'rootflow into (= negative rootflow) or out (positive flow) of layer in m3/m2 ground area
+            layerflow = layerflow + soilredist[z] * 1.0 / 998.2 * timestep; //'redistribution between layers (negative is inflow, positive is outflow). NOTE: soilredist(0) includes soil evaporation for layer 0
+            water[z] = water[z] - layerflow; //'subtracts rootflow from layer on per ground area basis
+        } //for//z
+        //'now do the bottom layer and potential groundwater input
+        if (night == "n") { //if// //'it//'s day, must adjust layerflow for sun vs. shade weighting
+            layerflow = elayer[layers][halt] * laisl / lai + elayer[layers][haltsh] * laish / lai; //'weighted flow
+        } else {
+            layerflow = elayer[layers][halt]; //'no adjustment necessary at night
+        } //End if// //'night if
+        layerflow = layerflow * baperga * 1 / 998.2 * timestep; //'rootflow into (= negative rootflow) or out (positive flow) of layer in m3/m2 ground area
+        layerflow = layerflow + soilredist[layers] * 1 / 998.2 * timestep; //'redistribution between layers (negative is inflow, positive is outflow)
+        //'water(layers) = water(layers) - layerflow //'subtracts rootflow from layer on per ground area basis
+        if (layerflow < 0) { //if// //'water is added
+            for (z = layers; z >= 0; z--){//z = layers To 0 Step -1 //'start at bottom, go up
+                deficit = thetasat[z] * depth[z] - water[z]; //'m of water required to wet up layer to SATURATION
+                if (-1 * layerflow - deficit >= 0) { //if// //'there//'s enough to wet the layer...remember, negative flow is flow into the layer
+                    water[z] = thetasat[z] * depth[z]; //'m water at saturation in layer
+                    layerflow = layerflow + deficit; //'reduce what//'s left over for next layers
+                } else { //'just soak up all the groundwater
+                    water[z] = water[z] - layerflow; //'add to bottom layer
+                    layerflow = 0; //' all gone
+                } //End if// //'wetting if
+            } //for//z
+            runoff = runoff - layerflow; //'add what//'s left to runoff...
+        } else { //'groundwater is positive...bottom layer is losing water
+            water[layers] = water[layers] - layerflow; //'subtract from bottom layer
+        } //End if// //'layerflow if
+
+        //'now reset any exhausted layers to extraction limit
+        if (water[0] <= 0){//'set lower limit to surface water content
+            water[0] = 0.00001;
+        }
+        for (z = 1; z <= layers; z++){//z = 1 To layers
+            if (water[z] < swclimit[z]){//'water at limit
+                water[z] = swclimit[z];
+            }
+        } //for//z
+
+        bool rainOverride = false;
+        if (iter_Counter == 0 && tod == 23 && (stage_ID == STAGE_ID_HIST_OPT || stage_ID == STAGE_ID_FUT_OPT)){
+            rainOverride = true;
+        }
+        //predawns mode
+        if (mode_predawns){
+            rainOverride = true;
+        } // end predawns mode
+
+        //'now check for rain during PREVIOUS TIME STEP
+        if (dSheet.Cells(rowD + dd - 1, colD + dColRain) >= 0.0 || rainOverride == true) { //if// //'there//'s been rain!
+            rain = dSheet.Cells(rowD + dd - 1, colD + dColRain) * 0.001; //'convert mm of rain to m depth...equivalent to m3/m2 water volume per ground area
+            //'if raining(xx) = "n" { //if// rain = 0 //'rain turned off
+
+            if (rainOverride){// just force everything to FC on every timestep
+                for (z = 0; z <= layers; z++){//z = 0 To layers //'add in rain
+                    water[z] = fc[z];
+                }
+            } // do this before the rain addition, so that we see all rain as runoff
+
+            if (rainEnabled == false || mode_predawns) {
+               rain = 0;
+            } // predawns mode also turns off rain
+            // [HNT] temp
+            //if (rain > 0.1) // more than 1/10th meter per hour is a data anomoly, however this is a poor assumption and these should be checked in the weather curator
+            //   rain = 0.0;
+            // [/HNT]
+            //'sumrain = rain * 1000 + sumrain //'total rain input in mm m-2
+            for (z = 0; z <= layers; z++)//z = 0 To layers //'add in rain
+            {
+               if (rain <= 0)
+                  break; //'rain//'s used up
+               deficit = fc[z] - water[z]; //'m3 of water per m2 to wet up layer to fc
+                                           //if (deficit >= -0.001) { //if// //'layer is at or below field capacity
+               if (rain - deficit >= 0) { //if// //'there//'s enough to wet the layer
+                  water[z] = fc[z];
+                  rain = rain - deficit;
+                  //'sumrain = sumrain + deficit //'absorbed rain
+                  drainage = rain * 1000.0; //'any left over will drain out the bottom unless layer is rising above field capacity
+               }
+               else {
+                  water[z] = water[z] + rain; //'it all goes into the first layer
+                                              //'sumrain = sumrain + rain
+                  rain = 0; //'rain used up
+                  drainage = 0;
+               } //End if// //'wetting up to field capacity "if"
+                 //}
+            } //for//z
+
+              // If there's drainage, and the ground water is on, that should be used to fill up to saturation
+            if (rain > 0.0 && ground == "y") // the remaining "drainage" is also still stored in the rain variable
+            {
+               // this is kind of inefficient, but the rain routine actually drained all the layers to FC even if GW was on and we should have been filling to sat
+               // now we start at the bottom and fill the layers to saturation using the drainage
+
+               for (j = layers; j >= 0; j--) //j = z - 1 To 0 Step -1 //'go back up to fill profile to saturation
+               {
+                  if (rain <= 0) //if// Exit for
+                     break;
+                  deficit = thetasat[j] * depth[j] - water[j];
+                  if (deficit >= 0) { //if// //'got capacity
+                     if (rain - deficit >= 0) { //if// //'enough rain to saturate the layer
+                        water[j] = thetasat[j] * depth[j]; //'saturate the layer
+                        rain = rain - deficit; //'reduce rain
+                     }
+                     else { //'rain absorbed by layer
+                        water[j] = water[j] + rain;
+                        rain = 0; //'use up rain
+                     } //End if// //'deficit=>0 "if"
+                  }
+                  else { //'deficit<0...layer//'s saturated
+                     rain = rain - deficit; //'increase rain by super-saturated amount (deficit is negative)
+                     water[j] = thetasat[j] * depth[j]; //'reset to saturation
+                  } //End if// //'deficit <>0 if
+               } //for//j
+               runoff = runoff + rain; //'whatever is left over will run off
+               drainage = 0; //'no drainage if any layer is rising above field capacity
+               rain = 0; //'reset rain to zero
+            }
+            //'sumdrain = sumdrain + drainage //'total drainage
+         } //End if// //'rain if
+
+           //'now check for exhausted layers
+         if (water[0] <= 0)
+            water[0] = 0.00001; //'set lower limit to surface water content
+         for (z = 1; z <= layers; z++)//z = 1 To layers
+         {
+            if (water[z] < swclimit[z])
+               layer[z] = 1; //'water exhausted
+         } //for//z
+           //'now get water content change over PREVIOUS time step
+         if ((dd > 1 && !isNewYear) || (useGSData && gs_yearIndex > 0)) { //if// //'now get updated new water content
+            waternew = 0;
+            for (z = 0; z <= layers; z++)//z = 0 To layers //'check for exhausted layers
+            {
+               waternew = water[z] + waternew;
+               //'Cells(16 + dd, 42 + z) = water[z]
+            } //for//z
+
+
+
+              //'waternew = waternew * 55555556# //'new water content at beginning of timestep
+            waterchange = waternew - waterold; //'total water change in mm m-2 ground area
+                                               //'waterchange = waterchange * 1 / baperga * 1 / laperba //'total water in mmol per m2 leaf area
+            dSheet.Cells(rowD + dd, colD + dColF_End_watercontent) = waternew * 1000; //'root zone water content in mm
+
+                                                                                      // always store the water content as the "final" -- not worth testing if it's really the last day of the year
+            gs_ar_waterFinal[gs_yearIndex] = waternew * 1000;
+
+            dSheet.Cells(rowD + dd, colD + dColF_End_waterchange) = waterchange * 1000; //'change in water content over PREVIOUS timestep
+                                                                                        //'if raining(xx) = "y" { //if// Cells(16 + dd, 59) = Cells(16 + dd - 1, 4) //'rain input per previous timestep
+            if (rainEnabled == true)// && dSheet.Cells(rowD + dd - 1, colD + dColRain) < 100.0)
+               dSheet.Cells(rowD + dd, colD + dColF_End_rain) = dSheet.Cells(rowD + dd - 1, colD + dColRain); //'rain input per previous timestep
+            dSheet.Cells(rowD + dd, colD + dColF_End_gwater) = gwflow; //'groundwater input in mm per timestep
+                                                                       //'Cells(16 + dd, 61) = transpirationtree * 3600 * timestep * laperba * baperga * 0.000000018 * 1000 //'transpiration per ground area in mm m-2 per timestop
+            dSheet.Cells(rowD + dd, colD + dColF_End_drainage) = drainage; //'total drainage in mm per timestep
+            dSheet.Cells(rowD + dd, colD + dColF_End_input) = dSheet.Cells(rowD + dd, colD + dColF_End_rain) + dSheet.Cells(rowD + dd, colD + dColF_End_gwater); //'total input per timestep in mm
+                                                                                                                                                                 //'Cells(16 + dd, 64) = water(0) * 1000 //'water in top layer in mm
+            gs_ar_input[gs_yearIndex] = gs_ar_input[gs_yearIndex] + dSheet.Cells(rowD + dd, colD + dColF_End_input);
+
+            dSheet.Cells(rowD + dd, colD + dColF_End_runoff) = runoff * 1000; //'excess root zone water per timestep in mm
+            waterold = waternew; //'reset to beginning of current timestep
+         } //End if// //'dd>1 if
+      } //End if// //'dd>1 if
+        //'} //End if////'pet if
+      if (dd > 1 && !isNewYear) { //if//
+         tempDouble = transpirationtree * 3600 * timestep * laperba * baperga * 0.000000018 * 1000;
+         dSheet.Cells(rowD + dd, o + colD + dColF_End_E) = tempDouble;//transpirationtree * 3600 * timestep * laperba * baperga * 0.000000018 * 1000; //'transpiration per ground area in mm m-2 per timestop
+         if (gs_inGrowSeason) // only record growing season E (should not be any non-GS E, but just for safety)
+            gs_ar_E[gs_yearIndex] = gs_ar_E[gs_yearIndex] + tempDouble;
+
+         dSheet.Cells(rowD + dd, o + colD + dColF_End_soilEvap) = soilevap * 1 / 998.2 * timestep * 1000; //'evaporative water loss in mm per timestep
+
+         tempDouble = transpirationtree * 3600 * timestep * laperba * baperga * 0.000000018 * 1000 + soilevap * 1 / 998.2 * timestep * 1000;
+         dSheet.Cells(rowD + dd, o + colD + dColF_End_ET) = tempDouble;//transpirationtree * 3600 * timestep * laperba * baperga * 0.000000018 * 1000 + soilevap * 1 / 998.2 * timestep * 1000;
+         gs_ar_ET[gs_yearIndex] = gs_ar_ET[gs_yearIndex] + tempDouble;
+
+         tempDouble = atree * timestep * 3600 * 0.001;
+         dSheet.Cells(rowD + dd, o + colD + dColF_End_ANet) = tempDouble;//atree * timestep * 3600 * 0.001; //'Anet per timestep in mmoles per leaf area
+         if (!std::isnan(tempDouble) && gs_inGrowSeason) // only record growing season A
+         {
+            gs_ar_Anet[gs_yearIndex] = gs_ar_Anet[gs_yearIndex] + tempDouble;
+            //anytime we record A, also record the ci-related outputs
+            // TODO CRIT units???
+            // Anet in mmoles per leaf area as in final output columns? (calc above)
+            if (night == "n") // daytime only
+            {
+               gs_ar_cica[gs_yearIndex] += cinc / ca; // these are in mols/mol, but it's a ratio so not important
+               gs_ar_cica_N[gs_yearIndex]++;
+
+               gs_ar_Aci[gs_yearIndex] += tempDouble * cinc; // for Aci what units? pa would be (cinc * patm * 1000)
+               gs_ar_AnetDay[gs_yearIndex] += tempDouble; // keep a daytime-only Anet tally
+                                                          //this is for A-weighted Ci
+                                                          //gs_ar_Acica[gs_yearIndex] += tempDouble * cinc / ca; // for this one, another ratio so ignore units
+            }
+         }
+      } //End if// //'dd>1 if
+
+      if (tod == 16 && !gs_doneFirstDay && gs_inGrowSeason && dSheet.Cells(rowD + dd - 3, colD + dColF_CP_kplant) > 0.000000001) { //if// //'get midday k//'s for day 1
+                                                                                                                                   // VPD zero case -- if the stomata did not open on the first day of the GS, kplant won't have been set and will be zero... in which case, try again tomorrow
+         gs_doneFirstDay = true;
+
+         sum = 0;
+         for (z = 1; z <= 3; z++)//z = 1 To 3
+         {
+            sum = sum + dSheet.Cells(rowD + dd - z, colD + dColF_CP_kplant);
+         } //for//z
+         kpday1 = sum / 3.0; //'average midday kplant on day one
+         sum = 0;
+         for (z = 1; z <= 3; z++)//z = 1 To 3
+         {
+            sum = sum + dSheet.Cells(rowD + dd - z, colD + dColF_CP_kxylem);
+         } //for//z
+         kxday1 = sum / 3.0; //'average midday kxylem on day one
+
+                             // [HNT] first day of the new growing season! Record the starting water
+         gs_ar_waterInitial_GS[gs_yearIndex] = dSheet.Cells(rowD + dd, colD + dColF_End_watercontent); // no matter what happened above, this has been set by this point
+                                                                                                       // and record this as the FINAL water for THIS YEAR's off season -- remember that this year's off season is the PRECEDING winter
+         gs_ar_waterFinal_OFF[gs_yearIndex] = dSheet.Cells(rowD + dd, colD + dColF_End_watercontent);
+         // [/HNT]
+      } //End if// //'dd=16 if
+      if (gs_doneFirstDay) { //if// //'calculate plc relative to midday of day 1
+         if (iter_refK < 0.000000001) // || iter_Counter == 0 // no longer appropriate to test for iter_Counter == 0 ... may be doing a seperate stress profile that refers to a saved refK, which will have been loaded at start of modelProgramMain
+            tempDouble = 100 * (1 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kplant) / kpday1); //' done to avoid repeating this calculation
+         else // if we haven't loaded a ref K it will be set to zero, and we need to fall back to the old method.. otherwise use refK to calculate PLC
+         {
+            tempDouble = 100 * (1 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kplant) / iter_refK); // PLCp calculated from refK if it exists
+            if (tempDouble < 0.0) // if we're using the refK, it's possible for this to be negative briefly -- should be considered zero
+               tempDouble = 0.0;
+         }
+         dSheet.Cells(rowD + dd, colD + dColF_End_PLCplant) = tempDouble; //'100 * (1 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kplant) / kpday1) 'plc plant...prior timestep
+
+                                                                          // no matter what, add it to the tally for calculating the mean over-season PLCp
+         gs_ar_PLCSum[gs_yearIndex] = gs_ar_PLCSum[gs_yearIndex] + tempDouble; // yearly running total of PLC values
+         gs_ar_PLCSum_N[gs_yearIndex] = gs_ar_PLCSum_N[gs_yearIndex] + 1; // total hours in GS
+                                                                          // now test for highest PLC and hours > 85
+         if (tempDouble > gs_ar_PLCp[gs_yearIndex])
+            gs_ar_PLCp[gs_yearIndex] = tempDouble;
+         if (tempDouble > 85.0)
+            gs_ar_PLC85[gs_yearIndex] = gs_ar_PLC85[gs_yearIndex] + 1;
+
+         tempDouble = 100 * (1 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kxylem) / kxday1);
+         dSheet.Cells(rowD + dd, colD + dColF_End_PLCxylem) = tempDouble; //'100 * (1 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kxylem) / kxday1) 'plc xylem...prior timestep
+         if (tempDouble > gs_ar_PLCx[gs_yearIndex])
+            gs_ar_PLCx[gs_yearIndex] = tempDouble;
+
+         //dSheet.Cells(rowD + dd, colD + dColF_End_PLCplant) = (100.0 * (1.0 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kplant) / kpday1)); //'plc plant...prior timestep
+         //dSheet.Cells(rowD + dd, colD + dColF_End_PLCxylem) = (100.0 * (1.0 - dSheet.Cells(rowD - 1 + dd, colD + dColF_CP_kxylem) / kxday1)); //'plc xylem...prior timestep
+
+         // [HNT] keep track of in-season input
+         if (gs_inGrowSeason)
+         {
+            // if we've done the first GS day and we're in the growing season then it's "this year" during GS
+            gs_ar_waterInput_GS[gs_yearIndex] += dSheet.Cells(rowD + dd, colD + dColF_End_input);
+         }
+         else
+         {
+            // if we've done the first GS day but we're NOT in the growing season, it's the winter following GS.
+            // this is considered NEXT YEAR's off-season input! First check if we already have a value for the FINAL water for THIS YEAR, because if it's zero then
+            // this is the first timestep of the winter and we need to store it
+            if (gs_ar_waterFinal_GS[gs_yearIndex] <= 0.0 && gs_ar_waterInitial_OFF[gs_yearIndex + 1] <= 0.0) // ok to use == or <= with double here because this will be memset to 0 if it hasn't been set
+            {
+               gs_ar_waterFinal_GS[gs_yearIndex] = dSheet.Cells(rowD + dd, colD + dColF_End_watercontent); // ok to overshoot by 1 hour, I think (instead of using dd - 1)
+               gs_ar_waterInitial_OFF[gs_yearIndex + 1] = dSheet.Cells(rowD + dd, colD + dColF_End_watercontent); // also the off-season initial for next year
+            }
+            else // otherwise, we're in the middle of NEXT YEAR's off season ... note this +1 on an array index is super lazy and bad. Make sure to never run exactly this array size # of years
+            {
+               gs_ar_waterInput_OFF[gs_yearIndex + 1] += dSheet.Cells(rowD + dd, colD + dColF_End_input); // add the stored input to the input tally, for NEXT YEAR
+            }
+         }
+         // [/HNT]
+      } //End if// //'dd>16 if
+      else if (!gs_inGrowSeason)// have NOT done first day and are NOT in growing season
+      {
+         // we must be in the pre-GS winter of what we called the NEXT year above... so gs_yearIndex is now that year, and we add to the off-season input for THIS year
+         gs_ar_waterInput_OFF[gs_yearIndex] += dSheet.Cells(rowD + dd, colD + dColF_End_input);
+      }
+}
+
+// Rhizosphere hydrodynamics
+/* Rhizosphere E(P)
+generate soil E(P) global curve--only need to do this once
+*/
+void MainProgram::get_rhizoPcrit(){
+    for (z = 1; z <= layers; z++) {//z = 1 To layers
+        p1 = 0;
+        k = 1;
+        e = 0; //flow integral
+        erh[z][0] = 0; //first array position is layer number
+        krh[z][0] = kmaxrh[z];
+        do{
+            p2 = p1 + pinc;
+            qtrapvg(p1, p2, s);
+            e = e + s;
+            erh[z][k] = e;
+            x = p2;
+            krh[z][k] = get_vg(x); //instantaneous k at upper limit of integration = derivative of flow integral (fundamental theorem of calculus)
+            p1 = p2; //reset p1 for next increment
+            k = k + 1;
+            if (k == 100000){
+               break; //Then Exit Do //avoid crashing for extreme vc//s
+            }
+        } while (!(krh[z][k - 1] < kmin));//Loop Until krh(z, k - 1) < kmin
+        pcritrh[z] = p2; //end of line for rhizo element z
+    } //endfor// z
+} //endsub//
+
+/* Rhizosphere flow
+Calculates rhizosphere flow using global E(P) curve
+*/
+void MainProgram::get_rhizoflow(){
+   plow = int(p1 / pinc); //'pressure index below target
+   k = int(p1 / pinc);
+   elow = erh[z][k]; //'e below target
+   klow = krh[z][k];
+   ehigh = erh[z][k + 1]; //'e above target
+   khigh = krh[z][k + 1];
+   plow = plow * pinc; //'convert index to pressure
+   estart = (p1 - plow) / pinc * (ehigh - elow) + elow; //'linear interpolation of starting e
+   klower = (p1 - plow) / pinc * (khigh - klow) + klow; //'linear interpolation of K(P)at lower limit of integration
+   plow = int(p2 / pinc); //'pressure index below target
+   k = int(p2 / pinc);
+   elow = erh[z][k]; //'e below target
+   klow = krh[z][k];
+   ehigh = erh[z][k + 1]; //'e above target
+   khigh = krh[z][k + 1];
+   plow = plow * pinc; //'convert index to pressure
+   efinish = (p2 - plow) / pinc * (ehigh - elow) + elow; //'linear interpolation of finishing e
+   kupper = (p2 - plow) / pinc * (khigh - klow) + klow; //'linear interpolation of K(P) at upper limit of flow integration
+   flow = efinish - estart; //'e upstream flow
+}
+
+// Hydraulics module 
+// TO-DO: paste these functions to a separate file as its own class
+
+/*Weibull parameter c
+Calculates c parameter from p12 and p50
+*/
+double MainProgram::get_cweibull(double &p12, double &p50) {
+   // c = (log(log(0.88)/log(0.50)))/(log(p12)-log(p50))
+   double px1;
+   double px2;
+   px1 = p12*-1; // absolute value of p12
+   px2 = p50*-1; // absolute value of p50
+   return (log(log(0.88)/log(0.5)))/(log(px1)-log(px2));
+}
+
+/*Weibull parameter b
+Calculates b parameter from parameter c and p12
+*/
+double MainProgram::get_bweibull(double &p12, double &c) {
+    // b = p12/(-log(0.88))^(1/c)
+    double px1;
+    px1 = p12*-1; // absolute value of p12
+    return px1/(pow(-log(0.88),(1/c)));
+}
+
+/*Weibull function for stem and leaves
+Fits weibull function for a given water potential x.
+It requires parameters b & c, and ksat
+*/
+double MainProgram::get_weibullfit(double &x, double &b, double &c, double &ksat) {
+   //wb = ksat * Exp(-((x / b) ^ c))
+   return ksat * exp(-(pow((x / b), c)));
+}
+
+// ROOT specific functions
+/*Weibull function for root elements*/
+double MainProgram::get_weibullfitroot(double &x){
+   //wb = ksat * Exp(-((x / b) ^ c))
+   return ksatr[z] * exp(-(pow((x / root_b), root_c)));
+}
+
+///*Functions to integrate root element z weibull*/
+/*Root element z integration function 1:
+*/
+void MainProgram::trapzdwbr(double &p1, double &p2, double &s, long &t) {
+    if (t == 1){
+        s = 0.5 * (p2 - p1) * (get_weibullfitroot(p1) + get_weibullfitroot(p2));
+        it = 1;
+    } else {
+        tnm = it;
+        del = (p2 - p1) / tnm;
+        x = p1 + 0.5 * del;
+        sum = 0;
+        for (j = 1; j <= it; j++){
+            sum = sum + get_weibullfitroot(x);
+            x = x + del;
+        }
+        s = 0.5 * (s + (p2 - p1) * sum / tnm);
+        it = 2 * it;
+    }
+    //[HNT]
+    //testcounterIntRoot = testcounterIntRoot + 1
+    //[\HNT]
+}
+
+/*Root element integration function 2:
+Evaluates accuracy of root element z integration
+*/
+void MainProgram::qtrapwbr(double &p1, double &p2, double &s){
+    olds = -1; //'starting point unlikely to satisfy if statement below
+    for (t = 1; t <= f; t++){
+        trapzdwbr(p1, p2, s, t);
+        if (std::abs(s - olds) <= epsx * std::abs(olds)){
+            return;
+        }
+        olds = s;
+    }
+}
+
+/* Root E(P) curves
+Generates fresh global E(P) curve for the element(erases history)
+*/
+void MainProgram::get_rootPcrit() { 
     //clear arrays from earlier calls
     memset(er, 0, sizeof(er));//Erase er
     memset(kr, 0, sizeof(kr));//Erase kr
-    hydraulicscalculator.get_rootPcrit(er,kr,z,layers,ksatr,p1,p2,pinc,k,e,olds,t,root_b,root_c,s,it,tnm,del,x,sum,f,epsx,kmin,pcritr);
-    bool vCurve = false;
-    memset(es, 0, sizeof(es));//Erase es
-    hydraulicscalculator.get_stemPcrit(es,vCurve,es_v,p1,p2,pinc,k,e,olds,t,f,stem_b,stem_c,ksats,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcrits); //'gets stem element curve 
-    memset(el, 0, sizeof(el));//Erase el
-    hydraulicscalculator.get_leafPcrit(el,vCurve,el_v,p1,p2,pinc,k,e,olds,t,f,leaf_b,leaf_c,ksatl,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcritl); //'gets leaf element curve
+    //do root elements
+    for (z = 1; z <= layers; z++){//z = 1 To layers
+        kr[z][0] = ksatr[z]; //kr is instantaneous K from weibull function
+        //kminr(z) = ksatr(z)
+        p1 = 0;
+        k = 1;
+        e = 0; //value of integral
+        er[z][0] = 0; //first array position is layer number
+        do{
+            p2 = p1 + pinc;
+            qtrapwbr(p1, p2, s);
+            e = e + s;
+            er[z][k] = e;
+            x = p2;
+            kr[z][k] = get_weibullfitroot(x); //weibull k at upper limit of integration = derivative of flow integral
+            p1 = p2; //reset p1 for next increment
+            k = k + 1;
+            if (k == 100000){
+                break;
+            }
+            //If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
+        } while (!(kr[z][k - 1] < kmin));//Loop Until kr(z, k - 1) < kmin
+        pcritr[z] = p2; //end of line for element z
+    } //endfor// z
+} //endsub//
+
+/* Root E(P) virgin curves
+Generates fresh global E(P) virgin curve for the element(erases history)
+*/
+void MainProgram::get_rootPcrit_v() { //generates fresh global E(P) curve for the element(erases history)
     //clear arrays from earlier calls
     memset(er_v, 0, sizeof(er_v));//Erase er_v
     memset(kr_v, 0, sizeof(kr_v));//Erase kr_v
-    hydraulicscalculator.get_rootPcrit_v(er_v,kr_v,z,layers,ksatr,p1,p2,pinc,k,e,olds,t,root_b,root_c,s,it,tnm,del,x,sum,f,epsx,kmin,pcritr); //erases history for md solution
-    vCurve = true;
-    memset(es_v, 0, sizeof(es_v));//Erase es_v
-    hydraulicscalculator.get_stemPcrit(es,vCurve,es_v,p1,p2,pinc,k,e,olds,t,f,stem_b,stem_c,ksats,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcrits);
-    memset(el_v, 0, sizeof(el_v));//Earase el_v
-    hydraulicscalculator.get_leafPcrit(el,vCurve,el_v,p1,p2,pinc,k,e,olds,t,f,leaf_b,leaf_c,ksatl,s,it,tnm,del,x,sum,epsx,ksh,kmin,pcritl);
-    memset(ter, 0, sizeof(ter));//Erase ter 
-    memset(tkr, 0, sizeof(tkr));//Erase tkr
-    memset(tes, 0, sizeof(tes));//Erase tes
-    memset(tel, 0, sizeof(tel));//Erase tel
+    //do root elements
+    for (z = 1; z <= layers; z++){//z = 1 To layers
+        kr_v[z][0] = ksatr[z]; //kr_v is instantaneous K from weibull function
+        //kminr(z) = ksatr(z)
+        p1 = 0;
+        k = 1;
+        e = 0; //value of integral
+        er_v[z][0] = 0; //first array position is layer number
+        do{
+            p2 = p1 + pinc;
+            qtrapwbr(p1, p2, s);
+            e = e + s;
+            er_v[z][k] = e;
+            x = p2;
+            kr_v[z][k] = (x); //weibull k at upper limit of integration = derivative of flow integral
+            p1 = p2; //reset p1 for next increment
+            k = k + 1;
+            if (k == 100000){
+                break;
+            }//If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
+        } while (!(kr_v[z][k - 1] < kmin));//Loop Until kr_v(z, k - 1) < kmin
+        pcritr[z] = p2; //end of line for element z
+    } //endfor// z
+} //endsub//
+
+/* Root layer flow
+Gets flow through root using global E(P) curve
+*/
+void MainProgram::get_rootflow(){
+   plow = int(p1 / pinc); //'pressure index below target
+   k = int(p1 / pinc);
+   elow = er[z][k]; //'e below target
+   klow = kr[z][k];
+   ehigh = er[z][k + 1]; //'e above target
+   khigh = kr[z][k + 1];
+   plow = plow * pinc; //'convert index to pressure
+   estart = (p1 - plow) / pinc * (ehigh - elow) + elow; //'linear interpolation of starting e
+   klower = (p1 - plow) / pinc * (khigh - klow) + klow; //'linear interpolation of starting K(P)(lower limit of integration)
+   plow = int(p2 / pinc); //'pressure index below target
+   k = int(p2 / pinc);
+   elow = er[z][k]; //'e below target
+   klow = kr[z][k];
+   ehigh = er[z][k + 1]; //'e above target
+   khigh = kr[z][k + 1];
+   plow = plow * pinc; //'convert index to pressure
+   efinish = (p2 - plow) / pinc * (ehigh - elow) + elow; //'linear interpolation of finishing e
+   kupper = (p2 - plow) / pinc * (khigh - klow) + klow; //'linear interpolation of ending K(P)(upper limit of integration)
+   flow = efinish - estart; //'e upstream flow
 }
 
+/* LU decomposition
+does LU decomposition on the jacobian prior to solution by lubksb
+*/
+void MainProgram::ludcmp() {
+    d = 1;
+    for (i = 1; i <= unknowns; i++){//i = 1 To unknowns
+        aamax = 0;
+        for (j = 1; j <= unknowns; j++){//j = 1 To unknowns
+            if (std::abs(jmatrix[i][j]) > aamax){
+                aamax = std::abs(jmatrix[i][j]);
+            }
+        }
+        if (aamax == 0){
+            return;
+        }
+        vv[i] = 1 / aamax;
+    }
+    for (j = 1; j <= unknowns; j++){//j = 1 To unknowns
+        for (i = 1; i < j; i++){//i = 1 To j - 1
+            sum = jmatrix[i][j];
+            for (k = 1; k < i; k++){//k = 1 To i - 1
+                sum = sum - jmatrix[i][k] * jmatrix[k][j];
+            }
+            jmatrix[i][j] = sum;
+        }
+        aamax = 0;
+        for (i = j; i <= unknowns; i++){//i = j To unknowns
+            sum = jmatrix[i][j];
+            for (k = 1; k < j; k++){//k = 1 To j - 1
+                sum = sum - jmatrix[i][k] * jmatrix[k][j];
+            }
+            jmatrix[i][j] = sum;
+            dum = vv[i] * std::abs(sum);
+            if (dum > aamax){
+                imax = i;
+                aamax = dum;
+            }
+        }
+        if (j != imax){// j <> imax
+            for (k = 1; k <= unknowns; k++){//k = 1 To unknowns
+                dum = jmatrix[imax][k];
+                jmatrix[imax][k] = jmatrix[j][k];
+                jmatrix[j][k] = dum;
+            }
+            d = -d;
+            vv[imax] = vv[j];
+        }
+        indx[j] = imax;
+        if (jmatrix[j][j] == 0){
+            jmatrix[j][j] = 1E-25;
+        }
+        if (j != unknowns){
+            dum = 1 / jmatrix[j][j];
+            for (i = j + 1; i <= unknowns; i++){//i = j + 1 To unknowns
+                jmatrix[i][j] = jmatrix[i][j] * dum;
+            }
+        }
+    }
+    memset(vv, 0, sizeof(vv));//Erase vv
+}
+
+/* Delta p's solver
+solves the decomposed jacobian delta p's
+*/
+void MainProgram::lubksb(){
+    ii = 0;
+    for (i = 1; i <= unknowns; i++){//i = 1 To unknowns
+        ll = int(indx[i]); //'indx array comes from ludcmp
+        sum = func[ll]; //'the func array input is the right-hand vector
+        func[ll] = func[i];
+        if (ii != 0){
+            for (j = ii; j < i; j++){//j = ii To i - 1
+               sum = sum - jmatrix[i][j] * func[j];
+            }
+        } else {
+            if (sum != 0){
+                ii = i;
+            }
+        }
+        func[i] = sum;
+    }
+    for (i = unknowns; i >= 1; i--){//i = unknowns To 1 Step -1
+        sum = func[i];
+        for (j = i + 1; j <= unknowns; j++) {//j = i + 1 To unknowns
+            sum = sum - jmatrix[i][j] * func[j];
+        }
+        func[i] = sum / jmatrix[i][i];
+    }
+}
+
+/* Newton Rhapson Function
+returns rhizosphere pressures and root pressure, pr, as function of pd's and e
+*/
+void MainProgram::newtonrhapson(){
+    //'prinitial = pr //record the original guess
+    weird = 0; //tracks pr estimate
+    check = 0; //restart loop counter
+    do {//loop to reset guesses
+        //'restore layer functioning
+        for (z = 1; z <= layers; z++){
+            if (kminroot[z] != 0){
+                layer[z] = 0; //make sure to start with all layers functioning
+                layerfailure[z] = "no failure"; //reset
+            }
+        }
+        failspot = "no failure";
+
+        if (weird == 1){//reset guesses
+            double rFloat = (double)rand() / (double)RAND_MAX;
+            k = int((layers - 1 + 1) * rFloat + 1);
+            pr = pd[k]; //random choice of pd
+            
+            // can enable this is running into erroneous solutions -- but allowing these to vary instead of resetting results in more frequent solutions in my experience
+            if (false){ // alternatively could randomize them properly
+                for (k = 1; k <= layers; k++){//reset prhz(k)
+                    prh[k] = pd[k];
+                }
+            }
+            weird = 0; //reset cutoff
+        } //end reset guesses loop
+        
+        check = check + 1; //number of restarts
+        ticks = 0; //convergence counter
+        
+        do {//loop to seek convergence
+            ticks = ticks + 1;
+            if (ticks > 1000){
+                weird = 1;
+                std::cout << "NR ticks exceeded 1000 -- setting weird=1 for retry. Pinc too high? dd = " << dd << std::endl;
+            }
+            //'get top row of matrix and right-hand func vector
+            //'zero out the jacobian first
+            for (k = 1; k <= unknowns; k++){
+                for (j = 1; j <= unknowns; j++){
+                    jmatrix[k][j] = 0;
+                }
+            }
+            //'fill up four arrays:
+            //'func(i) is zero flow function...the right-hand flow vector
+            //'dfrhdprh(i) is partial derivative of frh(i) for prh(i)(rhizo pressure)...the diagonal of the jacobian
+            //'dfrhdpr(i) is partial derivative of frh(i)for pr (root pressure)...the last column of the jacobian
+            //'dfrdprh(i) is partial derivative of fr for prh(i)...the last row of the jacobian
+            frt = 0; //this is the last row of right-hand flow vector
+            dfrdpr = 0; //this is lower right-hand partial for jacobian
+            for (z = 1; z <= layers; z++){
+               if (pd[z] >= pcritrh[z] || prh[z] >= pcritrh[z]){
+                    layer[z] = 1; //layer's just gone out of function
+                    layerfailure[z] = "rhizosphere";
+                    //weird = 1; //could be result of non-convergence
+                }
+                if (layer[z] == 0){//it's functional
+                    p1 = pd[z]; //p1 is not a guess
+                    p2 = prh[z]; //prh[z] IS a guess and it is initially set prior to the RN routine
+                    get_rhizoflow(); //gets flows through rhizosphere element from p2-p1 and E(p)curve; gets K's at p1 and p2 as well
+                    func[z] = flow;
+                    dfrhdprh[z] = kupper;
+                }
+                if (prh[z] >= pcritr[z] || pr >= pcritr[z]){
+                    layer[z] = 1; //layer's just gone out of function
+                    layerfailure[z] = "root";
+                    //weird = 1; //could be result of non-convergence
+                }
+                if (layer[z] == 0) {//it's functional
+                    p1 = prh[z]; //now re-set p1 to prh[z]...the guess
+                    p2 = pr; //guess must come from before NR routine?
+                    get_rootflow(); //gets flows through root element, and K's at upper and lower bounds
+                    func[z] = func[z] - flow;
+                    dfrhdprh[z] = dfrhdprh[z] + klower;
+                    dfrhdpr[z] = -kupper;
+                    dfrdprh[z] = -klower;
+                }
+                if (layer[z] == 1){ //layer's out of function...zero out values
+                    func[z] = 0;
+                    dfrhdprh[z] = 1E-25;
+                    dfrdprh[z] = 1E-25;
+                    dfrhdpr[z] = 1E-25;
+                    kupper = 1E-25;
+                    flow = 0;
+                }
+                dfrdpr = dfrdpr + kupper;
+                frt = frt + flow;
+            }
+            frt = frt - e;
+            //'now load jacobian
+            for (k = 1; k <= layers; k++){
+                jmatrix[k][unknowns] = dfrhdpr[k]; //last column with dFrh/dPr partials
+            }
+            for (k = 1; k <= layers; k++){
+                jmatrix[unknowns][k] = dfrdprh[k]; //last row with dFr/dPrh partials
+            }
+            for (k = 1; k <= layers; k++){
+                jmatrix[k][k] = dfrhdprh[k]; //diagonal of dFrh/dPrh partials
+            }
+            jmatrix[unknowns][unknowns] = dfrdpr; //lower right corner with dFr/dPr partial
+            func[unknowns] = frt; //last position in right-hand flow vector
+
+            //'ok, jacobian and righthand vector are loaded
+            //'test for total failure
+            sum = 0;
+            for (k = 1; k <= layers; k++){
+                sum = sum + layer[k];
+            }
+            if (sum == layers){//total failure
+                failspot = "belowground";
+                weird = 1; //trigger a restart
+            }
+            //'test for flow conservation (steady-state)
+            threshold = 0;
+            for (k = 1; k <= unknowns; k++){//k = 1 To unknowns
+               threshold = threshold + std::abs(func[k]);
+            }
+            if (ticks == 1){
+                initialthreshold = threshold;
+            }
+            //'remember to replace "n" with "unknowns" in ludcmp and lubksb
+            ludcmp(); //numerical recipe for doing LU decomposition of jacobian prior to solving
+            lubksb(); //solves the decomposed jacobian for delta p's
+            //'print out solution vector of pressures
+            //'revise unknown pressures
+            for (k = 1; k <= layers; k++){//k = 1 To layers
+                prh[k] = prh[k] - func[k]; //NOTE lubksb replaces original right-side func()vector with the solution vector
+            }
+            pr = pr - func[unknowns];
+            //'check for jumping lower bound
+            for (k = 1; k <= layers; k++){//k = 1 To layers
+                if (prh[k] < 0){
+                    prh[k] = 0;
+                }
+            }
+            if (pr < 0){
+                pr = 0;
+            }
+            //'if pr > pcritr Then
+            //'pr = prinitial
+            //'weird = 1 //trigger a re-start
+            //'}
+            if (ticks > 1){//check for non convergence
+                if (threshold > initialthreshold){
+                    weird = 1;//pr is spiraling, restart NR with new guesses
+                }
+                if (pr >= pcrits){
+                    weird = 1;
+                }
+            }
+        } while (!(threshold < 0.02 || weird == 1)); //Loop Until threshold < 0.01 Or weird = 1 //weird = 1 restarts NR
+    } while (!((threshold < 0.02 && weird == 0) || check > 500));
+
+    if (check > 500){
+        // disable this output if it's causing too much spam
+        //std::cout << "NR Failure " << threshold << " check = " << check << " dd = " << dd << " watercontent = " << waterold * 1000.0 << " weird = " << weird << std::endl;
+        // keep track of the frequency of NR failures
+        gs_ar_nrFailConverge[gs_yearIndex]++; // non-convergent failure
+        gs_ar_nrFailConverge_Water[gs_yearIndex] += waterold * 1000.0;
+        if (waterold * 1000.0 > gs_ar_nrFailConverge_WaterMax[gs_yearIndex]){
+            gs_ar_nrFailConverge_WaterMax[gs_yearIndex] = waterold * 1000.0;
+        }
+    }
+
+    //Loop Until threshold < 0.01 And weird = 0 Or check > 500 //give up after 2000 restarts
+    //'if check >= 500 Then Stop
+    //final step -- recheck the layers
+    for (z = 1; z <= layers; z++){
+        if (kminroot[z] != 0){
+            layer[z] = 0; //make sure to start with all layers functioning
+            layerfailure[z] = "no failure"; //reset
+        }
+        if (pd[z] >= pcritrh[z] || prh[z] >= pcritrh[z]){
+            layer[z] = 1; //layer's just gone out of function
+            layerfailure[z] = "rhizosphere";
+        }
+        if (prh[z] >= pcritr[z] || pr >= pcritr[z]){
+            layer[z] = 1; //layer's just gone out of function
+            layerfailure[z] = "root";
+        }
+    }
+}
+
+// STEM specific funtions
+/* Functions to integrate stem element*/
+/* Stem element integration
+*/
+void MainProgram::trapzdwbs(double &p1, double &p2, double &s, long &t) {
+    if (t == 1){
+        s = 0.5 * (p2 - p1) * (get_weibullfit(p1,stem_b,stem_c,ksats) + get_weibullfit(p2,stem_b,stem_c,ksats));
+        it = 1;
+    } else {
+        tnm = it;
+        del = (p2 - p1) / tnm;
+        x = p1 + 0.5 * del;
+        sum = 0;
+        for (j = 1; j <= it; j++) {
+            sum = sum + get_weibullfit(x,stem_b,stem_c,ksats);
+            x = x + del;
+        }
+        s = 0.5 * (s + (p2 - p1) * sum / tnm);
+        it = 2 * it;
+    }
+}
+
+/* Integration accuracy
+Evaluates accuracy of stem element integration
+*/
+void MainProgram::qtrapwbs(double &p1, double &p2, double &s) {
+    olds = -1; //starting point unlikely to satisfy if statement below
+    for (t = 1; t <= f; t++){
+        trapzdwbs(p1, p2, s, t);
+        if (std::abs(s - olds) <= epsx * std::abs(olds)){
+            return;
+        }
+        olds = s;
+    }
+}
+
+/* Stem E(P) curve
+Generates fresh global E(P) curve for the stem element(erases history)
+*/
+void MainProgram::get_stemPcrit(bool vCurve = false){
+    double *es_ptr = es;
+    if (vCurve){
+        memset(es_v, 0, sizeof(es_v));
+        es_ptr = es_v;
+    } else {
+        memset(es, 0, sizeof(es));
+    }
+    //memset(es, 0, sizeof(es));//Erase es //eliminate values from previous calls
+    p1 = 0;
+    k = 1;
+    e = 0; //value of integral
+    es_ptr[0] = 0;
+    do{
+        p2 = p1 + pinc;
+        qtrapwbs(p1, p2, s);
+        e = e + s;
+        es_ptr[k] = e;
+        x = p2;
+        ksh = get_weibullfit(x,stem_b,stem_c,ksats); //weibull k
+        p1 = p2; //reset p1 for next increment
+        k = k + 1;
+        if (k == 100000){
+            break;
+        }//If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
+    } while (!(ksh < kmin));//Loop Until ksh < kmin
+    pcrits = p2;//end of line for element z
+} //endsub//
+
+/* Stem hydraulic tension
+gets stem pressure and conductance from pr and e.
+*/
+void MainProgram::get_stem() {
+    //'start with stem
+    p1 = pr + pgrav; //add gravity drop before integration
+    plow = int(p1 / pinc); //pressure index below target
+    k = int(p1 / pinc);
+    elow = es[k]; //e below target
+    ehigh = es[k + 1]; //e above target
+    plow = plow * pinc; //convert index to pressure
+    estart = (p1 - plow) / pinc * (ehigh - elow) + elow; //linear interpolation of starting e
+    efinish = estart + e;
+    j = k;
+    do {//find efinish
+        j = j + 1;
+        if (es[j] == 0){
+            test = 1;
+            failspot = "stem";
+            return;
+        }
+    } while (!(es[j] > efinish)); //Loop Until es(j) > efinish
+    ehigh = es[j];
+    elow = es[j - 1];
+    p2 = ((efinish - elow) / (ehigh - elow)) * pinc + pinc * (j - 1); //pstem
+    ps = p2; //ps is downstream stem pressure
+    if (ps >= pcrits) {
+        test = 1;
+        failspot = "stem";
+        return;
+    }
+}
+
+// LEAF specific functions
+/* Function to integrate leaf element
+*/
+void MainProgram::trapzdwbl(double &p1, double &p2, double &s, long &t){
+    if (t == 1){
+        s = 0.5 * (p2 - p1) * (get_weibullfit(p1,leaf_b,leaf_c,ksatl) + get_weibullfit(p2,leaf_b,leaf_c,ksatl));
+        it = 1;
+    } else {
+        tnm = it;
+        del = (p2 - p1) / tnm;
+        x = p1 + 0.5 * del;
+        sum = 0;
+        for (j = 1; j <= it; j++){
+            sum = sum + get_weibullfit(x,leaf_b,leaf_c,ksatl);
+            x = x + del;
+        }
+        s = 0.5 * (s + (p2 - p1) * sum / tnm);
+        it = 2 * it;
+    }
+}
+
+/* Integration accuracy
+Evaluates accuracy of leaf element integration
+*/
+void MainProgram::qtrapwbl(double &p1, double &p2, double &s){
+    olds = -1; //starting point unlikely to satisfy if statement below
+    for (t = 1; t <= f; t++){
+        trapzdwbl(p1, p2, s, t);
+        if (std::abs(s - olds) <= epsx * std::abs(olds)){
+            return;
+        }
+        olds = s;
+    }
+}
+
+/* Leaf E(P) curve
+Generates fresh global E(P) curve for the leaf element(erases history)
+*/
+void MainProgram::get_leafPcrit(bool vCurve = false) {
+    double *el_ptr = el;
+    if (vCurve) {
+        memset(el_v, 0, sizeof(el_v));
+        el_ptr = el_v;
+    } else {
+        memset(el, 0, sizeof(el));
+    }
+    //memset(el_ptr, 0, sizeof(el_ptr));//Erase el_ptr //eliminate values from previous calls
+    p1 = 0;
+    k = 1;
+    e = 0; //value of integral
+    el_ptr[0] = 0;
+    do {
+        p2 = p1 + pinc;
+        qtrapwbl(p1, p2, s);
+        e = e + s;
+        el_ptr[k] = e;
+        x = p2;
+        ksh = get_weibullfit(x,leaf_b,leaf_c,ksatl); //weibull k
+        p1 = p2; //reset p1 for next increment
+        k = k + 1;
+        if (k == 100000){
+            break;
+        }//If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
+    } while (!(ksh < kmin)); //Loop Until ksh < kmin
+    pcritl = p2; //end of line for element z
+} //endsub//
+
+/* Leaf hydraulic tension
+//gets leaf pressure from stem pressure and e
+*/
+void MainProgram::get_leaf(){
+    p1 = ps;
+    plow = int(p1 / pinc); //pressure index below target
+    k = int(p1 / pinc);
+    elow = el[k]; //e below target
+    ehigh = el[k + 1]; //e above target
+    plow = plow * pinc; //convert index to pressure
+    estart = (p1 - plow) / pinc * (ehigh - elow) + elow; //linear interpolation of starting e
+    efinish = estart + e;
+    j = k;
+    do { //find efinish
+        j = j + 1;
+        if (el[j] == 0) { //= Empty
+            test = 1;
+            failspot = "leaf";
+            return;
+        }
+    } while (!(el[j] > efinish));//Loop Until el(j) > efinish
+    ehigh = el[j];
+    elow = el[j - 1];
+    p2 = ((efinish - elow) / (ehigh - elow)) * pinc + pinc * (j - 1); //pleaf
+    pl = p2; //pl is leaf pressure
+    if (pl >= pcritl){
+        test = 1;
+        failspot = "leaf";
+    }
+}
+
+// WHOLE PLANT
+/*Get pcrits*/
+void MainProgram::componentpcrits(){ //'gets pcrits
+    get_rhizoPcrit();
+    get_rootPcrit(); //'gets root element curves
+    get_stemPcrit(); //'gets stem element curve
+    pcrits;
+    get_leafPcrit(); //'gets leaf element curve
+    pcritl;
+
+    get_rootPcrit_v(); //erases history for md solution
+    get_stemPcrit(true);
+    get_leafPcrit(true);
+
+    memset(ter, 0, sizeof(ter));
+    memset(tkr, 0, sizeof(tkr));
+    memset(tes, 0, sizeof(tes));
+    memset(tel, 0, sizeof(tel));
+}
+
+/* Composite curve
+stores composite E(P)curve and the element conductances
+*/
+void MainProgram::compositecurve() {
+    elayer[0][p] = 0; //'no root mediated flow in topmost layer
+    for (z = 1; z <= layers; z++){//z = 1 To layers
+         if (layer[z] == 0) { //if//
+            prhizo[z][p] = prh[z];
+            p1 = prh[z];
+            p2 = pr;
+            get_rootflow();
+            elayer[z][p] = flow; //'flow through layer
+            if (flow != 0){
+               kroot[z][p] = std::abs(elayer[z][p] / (pr - prhizo[z][p]));
+            }
+            if (flow == 0) { //if//
+                if (refilling == true) { //if// //'for refilling, starting point is always weibull
+                    x = pd[z];
+                    kroot[z][p] = get_weibullfitroot(x);
+                } //End if//
+                if (refilling == false){
+                    kroot[z][p] = kminroot[z];
+                }
+            } //End if//
+         } //End if//
+         if (layer[z] == 1) { //if//
+            elayer[z][p] = 0; //'no flow
+            if (layerfailure[z] == "root") { //if// //'root element has failed
+                kroot[z][p] = 0; //'total cavitation in root
+                prhizo[z][p] = pd[z]; //'rhizosphere pressure returns to the predawn value
+            } //End if//
+            if (layerfailure[z] == "rhizosphere") { //if// //'rhizosphere element has failed
+                x = pr;
+                kroot[z][p] = get_weibullfitroot(x); //'root element conductance = instantaneous conductance from weibull curve at pr
+                prhizo[z][p] = pcritrh[z];
+            } //End if//
+        } //End if//
+    } //for//z
+    proot[p] = pr;
+    pstem[p] = ps;
+    pleaf[p] = pl;
+    if (e > 0) { //if//
+        kleaf[p] = e / (pl - ps); //'leaf element conductance
+        kstem[p] = e / (ps - pr - pgrav); //'stem element conductance subtracting extra gravity drop
+        kplant[p] = e / (pl - pleaf[0] - pgrav); //'whole plant k, subtracting extra gravity drop
+    } else {
+        if (refilling == false) { //if//
+            kleaf[p] = kminleaf;
+            kstem[p] = kminstem;
+            kplant[p] = kminplant;
+        } //End if//
+        if (refilling == true) { //if//
+            x = pl;
+            kleaf[p] = get_weibullfit(x,leaf_b,leaf_c,ksatl);
+            x = ps;
+            kstem[p] = get_weibullfit(x,stem_b,stem_c,ksats);
+            //'kplant[p]=??? ignore kplant setting for e=0...probably not important
+        } //End if//
+        //'dedp[p] = kminplant
+    } //End if//
+    eplant[p] = e; //'total flow
+    if (p > 0) { //if//
+        if (pleaf[p] - pleaf[p - 1] == 0) { //if//
+            test = 1;
+        } else {
+            dedp[p] = einc / (pleaf[p] - pleaf[p - 1]); //'dedp=instantaneous K of system
+            dedpf[p] = dedp[p] / dedp[1]; //'fractional canopy conductance
+        } //End if//
+    } //End if//
+    pcritsystem = pl;
+    ecritsystem = e;
+    total = p;
+}
+
+/* Store history
+stores historical element e(P) curves
+*/
+void MainProgram::storehistory(){
+    /*memset(ter, 0, sizeof(ter));
+    memset(tkr, 0, sizeof(tkr));
+    memset(tes, 0, sizeof(tes));
+    memset(tel, 0, sizeof(tel));*/
+
+    /*memcpy(ter, er, sizeof(ter));
+    memcpy(tkr, kr, sizeof(tkr));
+    memcpy(tes, es, sizeof(tes));
+    memcpy(tel, el, sizeof(tel));
+
+    memcpy(er, er_v, sizeof(er));
+    memcpy(kr, kr_v, sizeof(kr));
+    memcpy(es, es_v, sizeof(es));
+    memcpy(el, el_v, sizeof(el));*/
+
+    for (z = 1; z <= layers; z++){
+        k = 0;
+        do{
+            ter[z][k] = er[z][k];
+            tkr[z][k] = kr[z][k];
+            er[z][k] = er_v[z][k];
+            kr[z][k] = kr_v[z][k];
+            k = k + 1;
+            if (k == 100000){
+               break;
+            }
+        } while (er[z][k] != 0 || er_v[z][k] != 0 || ter[z][k] != 0);//Loop Until er(z, k) = Empty
+    }
+    k = 0;
+    do{
+        tes[k] = es[k];
+        es[k] = es_v[k];
+        k = k + 1;
+        if (k == 100000){
+            break;
+        }
+    } while (es[k] != 0 || es_v[k] != 0 || tes[k] != 0); //Loop Until es(k) = Empty
+    k = 0;
+    do{
+        tel[k] = el[k];
+        el[k] = el_v[k];
+        k = k + 1;
+        if (k == 100000){
+            break;
+        }
+    } while (el[k] != 0 || el_v[k] != 0 || tel[k] != 0); //Loop Until el(k) = Empty
+    for (z = 1; z <= layers; z++){
+        tlayer[z] = layer[z];
+        tlayerfailure[z] = layerfailure[z];
+    }
+    for (z = 1; z <= layers; z++){// 'get all layers functioning to start with
+        if (layerfailure[z] == "ok"){
+            layer[z] = 0;
+        } else if (layerfailure[z] == "rhizosphere"){
+            layer[z] = 0;
+        } else if (layerfailure[z] == "root" && kminroot[z] == 0){
+            layer[z] = 1; // 'take out root layer if failed at start of composite curve
+        } else{
+            layer[z] = 0; //'still functional
+        }
+    }
+}
+
+/* Gets history
+restores historical element e(P) curves
+*/
+void MainProgram::gethistory(){
+    for (z = 1; z <= layers; z++){
+        k = 0;
+        do{
+            er[z][k] = ter[z][k];
+            kr[z][k] = tkr[z][k];
+            k = k + 1;
+            if (k == 100000){
+                break;
+            }
+        } while (ter[z][k] != 0 || er[z][k] != 0);//Loop Until ter[z][k] = Empty
+    }
+    k = 0;
+    do{
+        es[k] = tes[k];
+        k = k + 1;
+        if (k == 100000){
+            break;
+        }
+    } while (tes[k] != 0 || es[k] != 0);//Loop Until tes[k] = Empty
+    k = 0;
+    do{
+        el[k] = tel[k];
+        k = k + 1;
+        if (k == 100000){
+            break;
+        }
+    } while (tel[k] != 0 || el[k] != 0);//Loop Until tel[k] = Empty
+    //'re-set failure status (this at the critical point)
+    for (z = 1; z <= layers; z++){
+        layer[z] = tlayer[z];
+        layerfailure[z] = tlayerfailure[z];
+    }
+}
+
+/* Update E(P) curves
+resets element E(P) curves
+*/
+void MainProgram::updatecurves(){
+    //'if k<kmin, re-assign e//'s on element curve by back-calculating
+    for (z = 1; z <= layers; z++){ //z = 1 To layers
+        if (true){
+            if (kroot[z][halt] < kminroot[z]){
+                kminroot[z] = kroot[z][halt];
+                phigh = int(proot[halt] / pinc) + 1; //'pressure datum just above the target
+                for (k = phigh; k >= 0; k--) {//k = phigh To 0 Step -1 //'back-calculate e//'s
+                    er[z][k] = er[z][phigh] - kminroot[z] * pinc * (phigh - k);
+                    kr[z][k] = kminroot[z]; //'back-calculate KR(Z,K) too for roots (not stem or leaves)
+                } //EndFor  k
+            } //EndIf//
+        }
+    } //EndFor  z
+    if (kstem[halt] < kminstem){
+        kminstem = kstem[halt];
+        phigh = int(pstem[halt] / pinc) + 1;
+        for (k = phigh; k >= 0; k--){ //k = phigh To 0 Step -1 //'back-calculate e//'s
+            es[k] = es[phigh] - kminstem * pinc * (phigh - k);
+        } //EndFor  k
+    } //EndIf//
+    if (kleaf[halt] < kminleaf){
+        kminleaf = kleaf[halt];
+        phigh = int(pleaf[halt] / pinc) + 1;
+        for (k = phigh; k >= 0; k--){//k = phigh To 0 Step -1 //'back-calculate e//'s
+            el[k] = el[phigh] - kminleaf * pinc * (phigh - k);
+        } //EndFor  k
+    } //EndIf//
+    //'if kplant[halt] < kminplant Then kminplant = kplant[halt]NOTE: kplant CAN go up because of rhizosphere recovery!
+}
+
+/* Canopy pressure
+computes carbon-based middays; pressures and cost curve from virgin supply function, gas exchange from historical values
+store history, get MD and cost function from virgin curve
+*/
+void MainProgram::canopypressure(){  
+    if (ecritsystem == 0){
+        k = 0;
+        goto tenMarker; //don't bother to find midday
+    }
+    storehistory(); //stores xylem element curves and failure status, resets layers to full functioning
+    //rootcurves(); //erases history for md solution
+    //stemcurve();
+    //leafcurve();
+    sum = 0;
+    t = 0;
+    for (k = 1; k <= layers; k++) {//assign source pressures, set layer participation
+        if (layer[k] == 0){
+            prh[k] = pd[k]; //initial guess of unknown rhizosphere pressures
+            sum = sum + pd[k];
+        } else {
+            prh[k] = pcritr[k];
+            t = t + 1;
+        }
+    }
+    if (t < layers) {
+        pr = sum / (layers - t); //set unknown proot to average pd
+    } else {
+        failure = 1; //system is critical
+        return;
+    }
+    test = 0; //=1 if stem or leaf fails
+    //virgin gain function params
+    psynmaxmd = 0;
+    psynmaxshmd = 0;
+    //now loop through virgin risk curve
+    e = -einc;
+    p = -1;
+    dedplmin = ksatp; //insures the kloss function is monotonic
+    do {
+        e = e + einc;
+        p = p + 1;
+        newtonrhapson(); //pd's already assigned...this solves for p's and e's in fingers of chicken foot
+
+        if (check >= 500){
+            //p = p - 1
+            //std::cout << "NR failed on virgin curve at e = " << e << " on timestep dd = " << dd << std::endl;
+            break; //gone as far as can go
+        }
+        get_stem(); //gets stem and leaf pressures
+        get_leaf();
+        pleafv[p] = pl; //pleaf from virgin curve
+        if (p == 0){
+            predawn = pl; //set the predawn...pl returned by "leaf" routine
+            plold = pl;
+        }
+        if (p > 0){
+            if ((pl - plold) == 0){
+                break; //gone to failure
+            }
+            if (p == 1){
+                dedplzero = einc / (pl - plold); //note: pl is returned by "leaf" routine
+            }
+            dedpl = einc / (pl - plold);
+            if (dedpl < dedplmin){
+               dedplmin = dedpl; //insure that kloss only goes up
+            }
+            klossv[p] = dedplzero - dedpl; //non-normalized kloss from virgin curve
+            //dedpf(p) = dedpl / dedplzero //fractional k/kmax canopy from virgin curve (units don't matter!)
+        }
+        if (pl >= pcritsystem){
+            break; //gone to failure
+        }          //now get virgin A curve
+
+        leaftempsmd(); //gets virgin sun layer leaf temperature from energy balance
+        leaftempsshademd(); //gets virgin shade layer leaf temperature
+        assimilationmd(); //gets virgin sun layer photosynthesis
+        assimilationshademd(); //gets virgin shade layer photosynthesis
+        //by now we have assigned psynmd(p) and psynshmd(p) and reset psynmaxes
+
+        plold = pl;
+        //e = e + einc
+        //p = p + 1
+    } while (!(test == 1 || p > 99900)); //loop to failure or out of "p"s
+    //Loop Until test = 1 Or p > 99900 'loop to failure or out of "p"s
+    //If check >= 2000 Then Exit Sub
+
+    if (p <= 2){
+        k = 0; //too close to critical, shut down system
+        goto tenMarker;
+    }
+
+    klossv[0] = 0;
+    maxkloss = dedplzero - dedpl; //maximum kloss...may not be kmax
+    totalv = p - 1;
+    klossv[totalv] = maxkloss;
+    //now normalize klossv for virgin pleafv
+    for (p = 0; p <= totalv; p++){
+        klossv[p] = klossv[p] / maxkloss;
+    }
+
+    //now, find the middday from virgin risk and gain
+    //First do for sun layer
+    p = -1; //p is still index for virgin curve
+    dpmax = 0;
+    dpamax = -100;
+    amaxmax = 0; //insures the gain function is monotonic
+
+    dpamin = 0.0; // keep track of low values to avoid extreme negative profit curves producing a result
+    do{
+        p = p + 1;
+        amaxfrac[p] = psynmd[p] / psynmaxmd; //this is the normalized revenue function from the virgin curve
+        if (amaxfrac[p] > amaxmax){
+            amaxmax = amaxfrac[p];
+        } else {
+            amaxfrac[p] = amaxmax;
+        } //this insures that amaxfrac monotonically increases
+        if (amaxfrac[p] < 0){
+            amaxfrac[p] = 0; //no negative gains
+        }
+        if (klossv[p] < 0){
+            klossv[p] = 0; //no negative risks
+        }
+        dpa[p] = amaxfrac[p] - klossv[p]; //profit, with revenue from virgin curve and cost from virgen one
+        if (p < runmean - 1){
+            rmean = 0;
+        }
+        if (p >= runmean - 1){ //get running mean
+            sum = 0;
+            for (i = p - runmean + 1; i <= p; i++){
+                sum = sum + dpa[i];
+            }
+            rmean = sum / runmean; //the running mean
+        }
+        if (rmean < dpamin){
+            dpamin = rmean;
+        }
+        if (rmean < 0){
+            rmean = 0; //avoid negative rmean
+        }
+        if (rmean > dpamax){
+            dpamax = rmean;
+            md = pleafv[p]; //midday pressure for sun layer from virgin curves
+        }//print out gain and cost
+    } while (!(einc * p >= gmax * lavpd[p] || total == 0 || (rmean < dpamax / cutoff && p > runmean && p > 15) || klossv[p] > 0.9 || p >= totalv));
+
+    //std::cout << "DPA MIN = " << dpamin << " DPA MAX = " << dpamax << std::endl;
+    if (dpamin < 0.0 && dpamax > 0.0 && std::abs(dpamin) > dpamax){
+        // the profit went more negative than positive, so reset mid-day to predawn
+        md = pleafv[0];
+    }
+    // [HNT] debug
+    if (!(rmean < dpamax / cutoff)){
+        //std::cout << "Terminated sun layer opt without finding peak! At timestep dd = " << dd << std::endl;
+        if (einc * p >= gmax * lavpd[p]){
+            ;// std::cout << "Terminated sun layer opt without finding peak: end case 1 einc * p >= gmax * lavpd[p]" << std::endl;
+        }
+        if (total == 0){
+            std::cout << "Terminated sun layer opt without finding peak: end case 2 total == 0" << std::endl;
+        }
+        if (p >= totalv){
+            std::cout << "Terminated sun layer opt without finding peak: end case 3 exceeded end of virgin curve" << std::endl;
+        }
+        if (klossv[p] > 0.9){
+            std::cout << "Terminated sun layer opt without finding peak: end case 4 klossv[p] > 0.9" << std::endl;
+        }
+    }
+    // [/HNT]
+    //while (!(einc * p >= gmax * lavpd[p] || total == 0 || rmean < dpamax / cutoff && p > runmean || klossv[p] > 0.9 || p >= totalv));
+    //Loop Until einc * p >= gmax * lavpd(p) Or total = 0 Or rmean < dpamax / cutoff And p > runmean Or klossv(p) > 0.9 Or p >= totalv //loop until g maxed out or to failure...note e and g in kg hr-1
+
+    dpasun = dpamax; // unused?
+
+    //now do for shade layer
+    if (psynmaxshmd == 0) { //shade layer's below light compensation point, don't open
+        mdsh = pleafv[0]; //set midday = predawn
+    } else {
+        p = -1; //p is still index for virgin curve
+        dpmax = 0;
+        dpamax = -100;
+        amaxmax = 0;
+        dpamin = 0.0;
+        do {
+            p = p + 1;
+            amaxfracsh[p] = psynshmd[p] / psynmaxshmd; //this is the normalized shade revenue function from the virgin curve
+            if (amaxfracsh[p] > amaxmax){
+                amaxmax = amaxfracsh[p];
+            } else {
+                amaxfracsh[p] = amaxmax;
+            }//this insures that amaxfrac monotonically increases
+            //now loop to find kloss from virgin curve that matches historical pleaf
+            if (amaxfracsh[p] < 0){
+                amaxfracsh[p] = 0; //no negative gains
+            }
+            if (klossv[p] < 0){
+                klossv[p] = 0; //no negative risks
+            }
+            dpa[p] = amaxfracsh[p] - klossv[p]; //profit, with revenue from historical curve and cost from virgen one
+            if (p < runmean - 1){
+                rmean = 0;
+            }
+            if (p >= runmean - 1){ //get running mean
+                sum = 0;
+                for (i = p - runmean + 1; i <= p; i++){
+                    sum = sum + dpa[i];
+                }
+                rmean = sum / runmean; //the running mean
+            }
+            if (rmean < dpamin){
+                dpamin = rmean;
+            }
+            if (rmean < 0){
+                rmean = 0; //avoid negative dpa
+            }
+            if (rmean > dpamax){
+                dpamax = rmean;
+                mdsh = pleafv[p]; //midday pressure for shade layer from virgin curve
+            }
+        } while (!(einc * p >= gmax * lavpdsh[p] || total == 0 || (rmean < dpamax / cutoff && p > runmean && p > 15) || klossv[p] > 0.9 || p >= totalv));
+        //Loop Until einc * p >= gmax * lavpdsh[p] Or total = 0 Or rmean < dpamax / cutoff And p > runmean Or klossv[p] > 0.9 Or p >= totalv //loop until g maxed out or to failure...note e and g in kg hr-1
+        if (dpamin < 0.0 && dpamax > 0.0 && std::abs(dpamin) > dpamax){
+            // the profit went more negative than positive, so reset mid-day to predawn
+            mdsh = pleafv[0];
+        }
+    } //psynmaxsh if
+
+    k = -1;
+    //Range("c17:f10000").ClearContents
+    do {
+        k = k + 1;
+    } while (!(pleaf[k] >= md || pleaf[k] == 0));
+    //Loop Until pleaf(k) >= md Or pleaf(k) = Empty //pleaf from historical curve must match pleaf from virgin curve
+    transpiration = eplantl[k]; //all gas exchange values are from most recent historical values
+    psynact = psyn[k];
+    gcmd = gcanw[k]; //g for water in mmol
+    lavpdmd = lavpd[k] * patm;
+    cinc = cin[k];
+    //If k > 1 Then deda = (eplantl(k) - eplantl(k - 1)) / (psyn(k) - psyn(k - 1))
+    halt = k; //halt is index of midday datum
+    //now do shade layer
+    k = -1;
+    do{
+        k = k + 1;
+    } while (!(pleaf[k] >= mdsh || pleaf[k] == 0));
+    //Loop Until pleaf(k) >= mdsh Or pleaf(k) = Empty //pleaf for historical curve must match pleaf from virgin curve
+    transpirationsh = eplantl[k]; //all gas exchange values are from most recent historical values
+    psynactsh = psynsh[k];
+    gcmdsh = gcanwsh[k]; //g for water in mmol
+    lavpdmdsh = lavpdsh[k] * patm;
+    cincsh = cinsh[k];
+    //If k > 1 Then deda = (eplantl(k) - eplantl(k - 1)) / (psyn(k) - psyn(k - 1))
+    haltsh = k; //halt is index of midday datum
+    if (ecritsystem == 0){
+        tenMarker:     //no midday
+        k = 0;
+        transpiration = eplantl[k]; //all gas exchange values are from most recent historical values
+        psynact = psyn[k];
+        gcmd = gcanw[k]; //g for water in mmol
+        lavpdmd = lavpd[k] * patm;
+        cinc = cin[k];
+        halt = k;
+        transpirationsh = eplantl[k]; //all gas exchange values are from most recent historical values
+        psynactsh = psynsh[k];
+        gcmdsh = gcanwsh[k]; //g for water in mmol
+        lavpdmdsh = lavpdsh[k] * patm;
+        cincsh = cinsh[k];
+        haltsh = k; //halt is index of midday datum
+    }
+    gethistory(); //reinstates historical element curves and failure status prior to updating
+    if (refilling == true){ //need to record midday kmins, uses sunlit pressures
+        for (z = 1; z <= layers; z++){
+            kminroot[z] = kroot[z][halt];
+        }
+        kminstem = kstem[halt];
+        kminleaf = kleaf[halt];
+    }
+}
+
+// Time-step simulation functions
 /* Time step iterator function */
 long MainProgram::modelTimestepIter(long& VBA_dd) {
     dd = VBA_dd;
@@ -1551,13 +3126,7 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
         p = p + 1;
         e = e + einc;
         //'solves for p//'s and e//'s in fingers of chicken foot
-        hydraulicscalculator.newtonrhapson(kminroot, pr, pd, prh,jmatrix,frt, dfrdpr, pcritrh, p1, p2, plow, pinc,
-            elow,erh, klow,krh,ehigh, khigh, estart, klower,efinish, kupper, flow,
-            func, dfrhdprh,pcritr,er,kr,dfrhdpr,dfrdprh, e, sum, threshold,
-            initialthreshold, aamax, vv, dum, indx, pcrits, waterold,
-            gs_ar_nrFailConverge, gs_ar_nrFailConverge_Water, gs_ar_nrFailConverge_WaterMax,
-            weird,check,layer,k,ticks,unknowns,d,imax,ii,ll,gs_yearIndex,dd,
-            layers,layerfailure,failspot);
+        newtonrhapson();
         memset(vv, 0, sizeof(vv));//Erase vv
         //'if check >= 400 { //if// GoTo 60: //'NR can//'t find a solution
         if (check > 500){ //if//
@@ -1574,21 +3143,14 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
             break;//Exit do
         } //End if//
         
-        hydraulicscalculator.get_stem(p1,pr,pgrav,plow,pinc,es,elow,ehigh,estart,efinish,
-            e,p2,ps,pcrits,k,test,failspot); //'gets stem and leaf pressures
-        hydraulicscalculator.get_leaf(p1,ps,pgrav,plow,pinc,el,elow,ehigh,estart,efinish,
-            e,p2,pl,pcritl,k,test,failspot);
+        get_stem(); //'gets stem and leaf pressures
+        get_leaf();
         
         if (test == 1) {
             break;//Exit do
         } 
         
-        hydraulicscalculator.get_compositecurve(elayer,prh,prhizo,plow,p1,pinc,elow,er,
-            klow,kr,ehigh,khigh,estart,klower,p2,efinish,kupper,flow,pr,kroot,x,pd,root_b,
-            root_c,ksatr,kminroot,pcritrh,proot,pstem,ps,pleaf,pl,kleaf,kstem,kplant,
-            kminleaf,kminstem,kminplant,e,pgrav,leaf_b,leaf_c,ksatl,stem_b,stem_c,ksats,eplant,
-            einc,dedp,dedpf,pcritsystem,ecritsystem,k,p,layer,test,total,layers,
-            refilling,layerfailure); //'stores the entire composite curve //if skip = 0 { //if//
+        compositecurve(); //'stores the entire composite curve //if skip = 0 { //if//
         
         // gets sun layer leaf temperature from energy balance
         photosyncalculator.get_leaftemps(rabs,ssun,sref,emiss,la,lg,lambda,airtemp,grad,gha,wind,
@@ -1813,7 +3375,7 @@ long MainProgram::modelTimestepIter(long& VBA_dd) {
     if (dd == 1 || isNewYear) { //if// //'NOTE: must be sure that pcritsystem is computed for dd=1!!! (i.e., it//'s not computed at night)
         x = pcritsystem; //'estimate of "permanent wilting point"
         for (z = 1; z <= layers; z++) { //z = 1 To layers
-            swclimit[z] = soilcalculator.get_swc(a,n,x,z); //'theta/thetasat at critical point
+            swclimit[z] = swc(x); //'theta/thetasat at critical point
             swclimit[z] = swclimit[z] * thetasat[z]; //'convert to water content
             swclimit[z] = swclimit[z] * depth[z]; //'water content left over in m3/m2 ground area
             //'sumsoil = sumsoil + (fc[z] - swclimit[z]) //'sum is total m3 water per m2 ground withdrawn
@@ -1972,10 +3534,10 @@ void MainProgram::saveOutputSheet(std::string filename, std::string sheetType){
 
 /* Running the model */ 
 long MainProgram::Rungarisom(){
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << "|  CARBON GAIN VS HYDRAULIC RISK MODEL V 2.0  |" << endl;
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << endl;
+    std::cout << " ---------------------------------------------" << std::endl;
+    std::cout << "|  CARBON GAIN VS HYDRAULIC RISK MODEL V 2.0  |" << std::endl;
+    std::cout << " ---------------------------------------------" << std::endl;
+    std::cout << std::endl;
 
     //Dim ddOutMod As Long // moved to module global
     memset(finalOutCells, 0, sizeof(finalOutCells)); // clear the final outputs data. Normal data sheets get cleared on each iteration, but this one only per-run
@@ -2011,21 +3573,21 @@ long MainProgram::Rungarisom(){
     if (stage_ID == STAGE_ID_FUT_STRESS_NOACCLIM){ // override some if we're doing the odd "no acclimation stress profile"
         std::cout << "Stage " << stage_ID << "; NoAcclim Stress Profile, overriding historical ca " << ca << " -> " << stage_CO2Fut << " and ksatp " << ksatp << " -> " << stage_KmaxFut << std::endl;
     }
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << "|        READING ClIMATE FORCING FILES        |" << endl;
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << endl;
-    std::cout << "- Growing Season Data: " << endl;
+    std::cout << " ---------------------------------------------" << std::endl;
+    std::cout << "|        READING ClIMATE FORCING FILES        |" << std::endl;
+    std::cout << " ---------------------------------------------" << std::endl;
+    std::cout << std::endl;
+    std::cout << "- Growing Season Data: " << std::endl;
     MainProgram::readGSSheet();
     MainProgram::readGrowSeasonData();
-    std::cout << endl;  
-    std::cout << "- Climate Forcing Data: " << endl;
+    std::cout << std::endl;  
+    std::cout << "- Climate Forcing Data: " << std::endl;
     MainProgram::readDataSheet();
-    std::cout << endl;
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << "|             INITIALIZING MODEL              |" << endl;
-    std::cout << " ---------------------------------------------" << endl;
-    std::cout << endl;
+    std::cout << std::endl;
+    std::cout << " ---------------------------------------------" << std::endl;
+    std::cout << "|             INITIALIZING MODEL              |" << std::endl;
+    std::cout << " ---------------------------------------------" << std::endl;
+    std::cout << std::endl;
 
     if((iter_useAreaTable)){
         MainProgram::readSiteAreaValues();

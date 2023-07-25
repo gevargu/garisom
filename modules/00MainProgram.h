@@ -20,11 +20,13 @@
 #include "01Macros.h"
 #include "01CSVRow.h" // to read rows from H. Todd
 #include "01IOHandler.h" // to manage inputs and outputs from H. Todd
+
+// Modules yet to be added
 #include "02Soils.h" // module to perform soil calculations
-#include "03Hydraulics.h"// module to fit weibull functions for xylem resistance
-#include "04Morphology.h" // module to calculate root morphological traits
-#include "05CAssimilation.h"// module with carbon assimilation and irradiance functions
-#include "06MiscFunctions.h" // set of functions used to calculate parameter values at the beginning
+//#include "03Hydraulics.h"// module to fit weibull functions for xylem resistance
+//#include "04Morphology.h" // module to calculate root morphological traits
+//#include "05CAssimilation.h"// module with carbon assimilation and irradiance functions
+//#include "06MiscFunctions.h" // set of functions used to calculate parameter values at the beginning
 
 // Define classes
 class MainProgram
@@ -35,10 +37,6 @@ public:
     CSVRow dataHeaderRow;
     CSVRow summaryHeaderRow;
     soils soilcalculator;
-    hydraulics hydraulicscalculator;
-    morphology morphologycalculator;
-    cassimilation photosyncalculator;
-    MiscFunctions misc_functions;
 
     // Variable declarations
     /* For reading data */
@@ -246,12 +244,18 @@ public:
     long gs_ar_kPlantMean_N[100], gs_ar_nrFailConverge[100], gs_ar_nrFailThreshold[100], gs_ar_cica_N[100];
 
     /* Functions used in the model */
+    
+    // For reading files
+    
     void readPARSheet();                    // read the parameter file data
     void readGSSheet();                     // read growing season data and atm CO2 
     void readGrowSeasonData();              // extract cell values from growing season data and CO2
     double getCarbonByYear(const long& yearNum, std::string GSCells[101][11], const long& maxYears);//
     void readDataSheet();                   // read climate forcing data
     void setConfig();                       // sets up model configuration
+    
+    // For starting the model
+    
     void InitialConditions();               // sets up initial conditions (substitutes ReadIn() in V 1.0.0)
     short InitModelVars();                  // initialize model variables
     short setIterationParams(long &iter);   // parameters used in the iterator
@@ -259,7 +263,51 @@ public:
     short cleanModelVars();                 // clear values
     bool locateRanges();                    // might delete this function
     void readSiteAreaValues();              // TO-DO: incorporate this function into the model or delete
-    void componentpcrits();                 // Get critical pressures (Pcrits)
+    
+    // Soils module
+
+    double get_vg(double &x);                                   // gets soil k
+    void trapzdvg(double &p1, double &p2, double &s, long &t);  // integrates VG
+    void qtrapvg(double &p1, double &p2, double &s);            // evaluates accuracy of van genuchten integration
+    double rvg(double &x);                                      // gives soil Y in MPa
+    double swc(double &x);                                      // gives soil water content
+    void get_soilwetness();                                      // gets predawns accounting for rain, groundwater flow, transpiration, and redistribution
+    void get_rhizoPcrit();                                      // generate soil E(P) global curve
+    void get_rhizoflow();                                       // calculates rhizosphere flow using global E(P) curve
+    
+    // Hydraulics module
+
+    double get_cweibull(double &p12, double &p50);                          // gets parameter c from p12 and p50
+    double get_bweibull(double &p12, double &c);                            // gets parameter b from par c and p12
+    double get_weibullfit(double &x, double &b, double &c, double &ksat);   // fits weibull function, used for stems and leaves
+    double get_weibullfitroot(double &x);                                   // fits root-specific weibull function
+    void trapzdwbr(double &p1, double &p2, double &s, long &t);             // integrates weibull function across root element z
+    void qtrapwbr(double &p1, double &p2, double &s);                       // evaluates integration
+    void get_rootPcrit();                                                   // generates fresh global E(P) curve for the element(erases history)
+    void get_rootPcrit_v();                                                 // generates fresh global E(P) virgin curve for the element(erases history)
+    void get_rootflow();                                                    // gets flow through root using global E(P) curve
+    void ludcmp();                                                          // does LU decomposition on the jacobian prior to solution by lubksb
+    void lubksb();                                                          // solves the decomposed jacobian delta p's
+    void newtonrhapson();                                                   // returns rhizosphere pressures and root pressure, pr, as function of pd's and e
+    void trapzdwbs(double &p1, double &p2, double &s, long &t);             // integrates stem element weibull
+    void qtrapwbs(double &p1, double &p2, double &s);                       // evaluates stem integration
+    void get_stemPcrit(bool vCurve = false);                                // generates stem E(P) curve
+    void get_stem();                                                        // gets stem pressure and conductance from pr and e.
+    void trapzdwbl(double &p1, double &p2, double &s, long &t);             // integrates leaf element weibull
+    void qtrapwbl(double &p1, double &p2, double &s);                       // evaluates leaf integration
+    void get_leafPcrit(bool vCurve = false);                                // generates fresh global E(P) curve for the leaf element(erases history)
+    void get_leaf();                                                        // gets leaf pressure from stem pressure and e
+    void componentpcrits();                                                 // gets critical pressures (Pcrits)
+    void compositecurve();                                                  // stores composite E(P)curve and the element conductances
+    void storehistory();                                                    // stores historical element e(P) curves
+    void gethistory();                                                      // restores historical element e(P) curves
+    void updatecurves();                                                    // resets element E(P) curves
+    void canopypressure();                                                  // computes carbon-based middays
+
+    // Photosynthesis module
+    
+    // For time-step simulations
+    
     long modelTimestepIter(long& VBA_dd);   // time step iterator
     void modelProgramNewYear();             // new year parameterization
     void saveOutputSheet(std::string filename, std::string sheetType);

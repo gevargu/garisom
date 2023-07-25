@@ -7,6 +7,7 @@
 #define DATAFILE_MAXCOLS 101
 #define CONFIGFILE_MAXROWS 10
 #define CONFIGFILE_MAXCOLS 30
+#define FIO_PRECISION 12
 
 // For staging the model
 #define STAGE_ID_NONE 0 // use this mode to skip all of the stage code and just run based on param sheet settings (a "normal" run, the default config)

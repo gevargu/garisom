@@ -11,27 +11,8 @@ using namespace std;
 class soils
 {
 public:
-    // soil structure
-    double get_depths(long &k, double &layers, double &beta);
-    double get_halfdepths(long &k, double &layers, double &beta);
-    double get_layvolume(double &depth, double &pi, double &depthmax, double &aspect);
-    double get_radius(double &vol, double &depth,double &pi);
-    // rhizosphere resistance
-    double get_rhizor(double &rplant, double &rhizotarg);
-    double get_kmaxrh(double &rhizor, double &vgterm);
     // Van Genuchten functions
     void get_vgparams(std::string &texture, long &layers, std::string (&soillayersTable)[PARAMFILE_MAXROWS][PARAMFILE_MAXCOLS], long &rowLR, long &colLR);
-    double get_vgp(double (&a)[6], double (&n)[6], double &x, long &z);
-    double get_vgterm(double (&n)[6], double &vp, long &z);
-    double get_vg(double (&a)[6], double (&n)[6], double &x, double (&kmaxrh)[6], long &z);
-    // Van Genuchten Integration
-    void trapzdvg(double (&a)[6], double (&n)[6], double &x, double (&kmaxrh)[6], double &p1, double &p2, double &s,double& del, double& sum,
-        long &t, long &z, long &it, long &tnm, long &j);
-    void qtrapvg(double &olds, double (&a)[6], double (&n)[6], double &x, double (&kmaxrh)[6], double &p1, double &p2,
-        double &s,double &del, double &sum, double &eps, long &tmax, long &t, long &z, long &it, long &tnm, long &j);
-    // Soil water status
-    double get_rvg(double (&a)[6], double (&n)[6], double &x, long &z);
-    double get_swc(double (&a)[6], double (&n)[6], double &x, long &z);
     // Soil wetness
     void get_soilwetness(double &drainage, double &runoff, double &waterold, double &x, double (&thetafracres)[6], double (&a)[6],
         double (&n)[6], double (&thetafracfc)[6], double (&thetafc)[6], double (&depth)[6], double &fieldcapfrac, double (&thetasat)[6], double (&water)[6],
@@ -56,10 +37,6 @@ public:
         double (&n)[6], double (&prh)[6], double (&pcritrh)[6], double (&pcritr)[6], double &sum, double &pr, double &prinitial,
         long &k, long &layers, long (&layer)[6], long &z, long &rowD, long &dd, long &colD, long &dColRain, long &t, long &failure,
         long &dColF_p1, long &o, std::string (&layerfailure)[6], std::string &failspot, bool &mode_predawns);
-    // Soil E(P) global curve
-    void get_rhizoPcrit(long &z, long &layers, double &p1, double &p2,long &k, double &e,double (&erh)[6][100001], double (&krh)[6][100001],
-        double &pinc, double &kmin, double &olds, long &t,double (&a)[6], double (&n)[6], double (&kmaxrh)[6], double &s,
-        long &it, long &tnm, double &del, double &x, double &sum, double (&pcritrh)[6], long &j, double &eps, long &tmax);
     // Soil water flow 
     void get_soilflow(double &store, double (&kmaxrh)[6], double (&kkmax)[6], double (&depth)[6], double (&pd)[6],
         double (&soilredist)[6], double &p1, double &pend, double &e, double &p2, double &pinc, double &olds, double (&a)[6],

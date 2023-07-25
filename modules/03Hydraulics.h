@@ -17,32 +17,33 @@ using namespace std;
 class hydraulics
 {
 public:
-        // genaral
-        double get_cweibull(const double& p12, const double& p50);
-        double get_bweibull(const double& p12, const double& c);
-        double get_weibullfit(const double& x,const double& b, const double& c, const double& ksat);
+        // general
+        double get_cweibull(double &p12, double &p50);
+        double get_bweibull(double& p12, double& c);
+        double get_weibullfit(double& x, double& b, double &c, double &ksat);
         // root block
-        double get_rootpercent(const double& leafpercent);
-        double get_rootkmax(const double& rootpercent,const double& rsatp);
-        double get_weibullfitroot(const double& x, const double& b, const double& c, double* ksatr, const int& z);
-        void trapzdwbr(const long& t, double& p1, double& p2, const double& b, const double& c,double* ksatr, const int& z, 
-                double& s, long& it, long& tnm, double& del, double& x, double& sum);
-        void qtrapwbr(double& olds, long& t, double& p1, double& p2, const double& b, const double& c,double* ksatr, 
-                const int& z, double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx);
-        void get_rootPcrit(double er[6][100001],double kr[6][100001],long& z, const long& layers,double* ksatr, double& p1, 
-                double& p2, const double& pinc,long& k,double& e,double& olds, long& t, const double& b, const double& c, 
-                double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx, 
-                const double& kmin,double* pcritr);
-        void get_rootPcrit_v(double er_v[6][100001],double kr_v[6][100001],long& z, const long& layers,double* ksatr, double& p1, 
-                double& p2, const double& pinc,long& k,double& e,double& olds, long& t, const double& b, const double& c, 
-                double& s, long& it, long& tnm, double& del, double& x, double& sum, const long& f, double& epsx, 
-                const double& kmin,double* pcritr);
-        void get_rhizoflow(double& plow, double& p1, double& pinc, double& elow, double erh[6][100001], double& klow,
-                double krh[6][100001],double& ehigh,  double& khigh, double& estart, double& klower, double& p2,
-                double& efinish, double& kupper, double& flow,long& k, long& z);
-        void get_rootflow(double& plow, double& p1, double& pinc, double& elow, double er[6][100001], double& klow,
-                double kr[6][100001],double& ehigh,  double& khigh, double& estart, double& klower, double& p2,
-                double& efinish, double& kupper, double& flow, long& k, long& z);
+        double get_rootpercent(double &leafpercent);
+        double get_rootkmax(double &rootpercent, double &rsatp);
+        double get_weibullfitroot(double &x, double &b, double &c, double (&ksatr)[6], long &z);
+        void trapzdwbr(double &p1, double &p2, double &root_b, double &root_c, double (&ksatr)[6],
+                double &x, double &sum, double &del, double &s, long &t, long &z, long &it, long &tnm, long &j);
+        void qtrapwbr(double &olds, double &p1, double &p2, double &root_b, double &root_c, double (&ksatr)[6],
+                double &x, double &sum, double &del, double &s, double &epsx,long &t, long &f, long &z, long &it,
+                long &tnm, long &j);
+        void get_rootPcrit(double (&kr)[6][100001], double (&ksatr)[6], double &p1, double &e, double (&er)[6][100001],
+                double &p2, double &pinc, double &olds, double &root_b, double &root_c, double &x, double &sum, double &del,
+                double &s,double &epsx, double &kmin, double (&pcritr)[6], long &z,long &layers, long &k, long &t, long &f, 
+                long &it, long &tnm, long &j);
+        void get_rootPcrit_v(double (&kr_v)[6][100001], double (&ksatr)[6], double &p1, double &e, double (&er_v)[6][100001],
+                double &p2, double &pinc, double &olds, double &root_b, double &root_c, double &x, double &sum, double &del, 
+                double &s, double &epsx, double &kmin, double (&pcritr)[6], long &z,long &layers, long &k, long &t, long &f,
+                long &it, long &tnm, long &j);
+        void get_rhizoflow(double &plow, double &p1, double &pinc, double &elow, double (&erh)[6][100001], double &klow,
+                double (&krh)[6][100001], double &ehigh, double &khigh, double &estart, double &klower, double &p2, long &k,
+                double &efinish, double &kupper, double &flow, long &z);
+        void get_rootflow(double &plow, double &p1, double &pinc, double &elow, double (&er)[6][100001],
+                double &klow, double (&kr)[6][100001], double &ehigh, double &khigh, double &estart, double &klower, double &p2,
+                double &efinish, double &kupper, double &flow, long &k, long &z);
         void ludcmp(double& sum, double& aamax, double jmatrix[7][7], double* vv, double& dum,
                 double* indx, long& d, long& unknowns, long& imax);
         void lubksb(double& sum, double jmatrix[7][7], double* indx, double* func, long& ii, long& unknowns, long& ll);
