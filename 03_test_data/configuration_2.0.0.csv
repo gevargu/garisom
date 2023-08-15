@@ -1,0 +1,3 @@
+soil,soil,soil,climate,climate,climate,hydraulics,hydraulics,hydraulics,baga,baga,baga,baga,baga,baga,community,community,NULL
+i_gWaterEnable,i_soilRedEnable,i_soilEvapEnable,i_rainEnable,i_useGSDataStress,i_useGSDataOpt,i_refilling,i_predawnsMode,i_cavitFatigue,i_iter_gwEnable,i_iter_ffcEnable,i_iter_bagaEnable,i_iter_useAreaTable,i_iter_yearsAsCount,i_iter_runSupplyCurve,i_multipleSP,i_speciesN,NULL
+n,y,y,y,y,y,n,n,n,n,n,n,n,n,n,n,2,NULL

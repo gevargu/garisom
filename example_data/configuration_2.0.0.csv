@@ -1,4 +1,0 @@
-1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17
-soil,soil,soil,climate,climate,hydraulics,hydraulics,baga,baga,baga,baga,baga,baga,climate,hydraulics,stand,stand
-i_gWaterEnable,i_soilRedEnable,i_soilEvapEnable,i_rainEnable,i_useGSDataStress,i_refilling,i_predawnsMode,i_iter_runSupplyCurve,i_iter_useAreaTable,i_iter_gwEnable,i_iter_ffcEnable,i_iter_bagaEnable,i_iter_yearsAsCount,i_useGSDataOpt,i_xylemHysteresis,i_multipleSP,i_speciesN
-off,on,on,on,on,off,off,off,off,off,off,off,off,on,off,off,1
