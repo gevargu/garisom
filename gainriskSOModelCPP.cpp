@@ -2099,6 +2099,7 @@ public:
                thetafracres[z] = swc(x); //'residual thetafrac
                thetafracfc[z] = (1 - thetafracres[z]) * fieldcapfrac + thetafracres[z]; //'thetafrac at field capacity
                thetafc[z] = thetasat[z] * thetafracfc[z]; //'water content at field capacity
+               std::cout << "residual thetafc: " << thetafc[z] << std::endl;
             } //for//z //'
             for (z = 0; z <= layers; z++)//z = 0 To layers
             {
@@ -2447,11 +2448,13 @@ public:
                layer[z] = 1;
                layerfailure[z] = "rhizosphere";
             } //End if//
+            std::cout << "Pcrit in Roots: " << pcritr[z] << std::endl;
             if (pd[z] >= pcritr[z] && z > 0) { //if// //'only rooted layers // [HNT] >= instead of > for consistency w/ Newton Rhapson update
                layer[z] = 1;
                layerfailure[z] = "root";
                kminroot[z] = 0;
             } //End if//
+            std::cout << "layer failure: " << layerfailure[z] << std::endl;
          }
          else { //'layer//'s disconnected
             pd[z] = pcritr[z];
@@ -2462,7 +2465,7 @@ public:
       sum = 0;
       t = 0;
       for (k = 1; k <= layers; k++)//k = 1 To layers
-      {
+      {  
          if (layer[k] == 0) { //if//
             sum = sum + pd[k];
          }
@@ -2841,6 +2844,7 @@ public:
                break;
             //If k = 100000 Then Exit Do //avoid crashing for extreme vc//s
          } while (!(kr[z][k - 1] < kmin));
+         std::cout << "checking kmin: " << kmin << std::endl; 
          //Loop Until kr(z, k - 1) < kmin
          pcritr[z] = p2; //end of line for element z
       } //endfor// z
