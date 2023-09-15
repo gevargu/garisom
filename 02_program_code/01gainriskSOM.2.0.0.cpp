@@ -23,7 +23,21 @@
         
         d) Model structure: The model has multiple functions and classess that together perform the calculations.
 
-        TO-DO: In the future the model will be broken into modules with different source files for each module:
+### Model outputs:
+
+### Notes on recent updates:
+    1. Unique parameter file which facilitates the inclusion of multiple species/PFTs per site
+    2. Addition of unique file with model configuration. In this file we specify now the location for the climate forcing files. 
+        This is important to avoid overloading servers with heavy files when running multiple simulations (e.g., sensitivity analysis)
+    3. It accounts for increases in atmospheric CO2.
+    4. Estimation of weibull parameters via p12 and p50, which facilitates data acquisition.
+    5. Also includes a cavitation fatigue module to re-calculate p50 and subsequently the weibull c and b parameters while accounting for previous year damage to the xylem.
+
+### Notes on future updates:
+    1. Addition of a data assimilation routine to facilitate iterative forecasting. Will do using PEcAn.
+    2. Addition of a hydrological competition module to quantify the effects of multiple species on the water budget.
+    3. Addition of modules to facilitate troubleshooting and additions:
+    TO-DO: In the future the model will be broken into modules with different source files for each module:
             01: Input management functions 
                 01CSVROW (h)
                 01Macros (h)
@@ -38,19 +52,6 @@
             06: Time-step simulations
                 06MiscFunctions (h/cpp)
 
-### Model outputs:
-
-### Notes on recent updates:
-    1. Unique parameter file which facilitates the inclusion of multiple species/PFTs per site
-    2. Addition of unique file with model configuration
-    3. It accounts for increases in atmospheric CO2.
-    4. Estimation of weibull parameters via p12 and p50, which facilitates data acquisition.
-    5. Also includes a cavitation fatigue module to re-calculate the weibull function while accounting for previous year damage to the xylem.
-
-### Notes on future updates:
-    1. Addition of modules to facilitate troubleshooting and additions.
-    2. Addition of a data assimilation routine to facilitate iterative forecasting. Will do using PEcAn.
-    3. Addition of a hydrological competition module to quantify the effects of multiple species on the water budget.
 */ 
 //
 // Load the necessary libraries
@@ -294,7 +295,8 @@ public:
     soils soilcalculator;
 
     // Model configuration variables
-    bool hysteresis;
+    bool hysteresis, stem_only;
+    std::string climate_forcing_data_path, growing_season_limits_data_path;
 
     // Site identifiers
     std::string species, region, siteID;
@@ -305,6 +307,12 @@ public:
     // Plant community parameters
     long species_no, sp_n;
     std::string species_no_string;
+
+    // Plant hydrodynamics
+    double p12_r, p50_r, p12_s, p50_s, p12_l, p50_l;
+
+    // Xylem hysteresis
+    double meanPLC, oldmeanPLC, sapwoodT, conduitD, p50s_fatigue[4], p50r_fatigue[4];
 
     // old definitions
     double *p_kr, *p_erh, *p_er, *p_krh, *p_tkr, *p_ter;
@@ -436,7 +444,6 @@ public:
     long iter_bisect_underCount;
     long iter_bisect_exponent; // store the exponent so we can increment
     bool iter_bisect_foundOver; // have we found an "over" value? if not we'll keep iterating by 1/8 of the max until we do
-                                // end
 
     std::string raining;
     bool rainEnabled;
@@ -734,17 +741,20 @@ public:
     {
         memset(GSCells, 0, sizeof(GSCells));
 
-        std::string GSFileName = "";
+        //std::string GSFileName = "";
+        std::string GSFileName = growing_season_limits_data_path;
 
         if (stage_ID == STAGE_ID_NONE)
         {
-            GSFileName = "seasonlimits_2.0.0.csv";
+            //GSFileName = "seasonlimits_2.0.0.csv";
+            GSFileName = growing_season_limits_data_path;
         }
 
         if (useGSData && GSFileName != "") // only if we actually selected a file, and we're using the GS data files in the first place
         {
 
-            //std::cout << "Reading growing season limits." << std::endl;
+            std::cout << std::endl;
+            std::cout << "Reading growing season limits." << std::endl;
 
             std::ifstream dataFile(GSFileName);
             if (!dataFile.is_open())
@@ -796,10 +806,12 @@ public:
                 //std::cout << "4th Element(" << row[3] << ")\n";
             }
             std::cout << "Finished GS RANGE read." << std::endl;
+            std::cout << std::endl;
         }
         else
         {
             std::cout << "Skipping GS RANGE load -- Years will be treated as independent." << std::endl;
+            std::cout << std::endl;
         }
     }
 
@@ -846,11 +858,13 @@ public:
 
         memset(dataCells, 0, sizeof(dataCells));
 
-        std::string dataFileName = "dataset.csv";
+        //std::string dataFileName = "dataset.csv";
+        std::string dataFileName = climate_forcing_data_path;
 
         if (stage_ID == STAGE_ID_NONE)
         {
-            dataFileName = "dataset.csv";
+            //dataFileName = "dataset.csv";
+            dataFileName = climate_forcing_data_path;
         }
 
         //std::cout << "Reading data set." << std::endl;
@@ -859,6 +873,7 @@ public:
         if (!dataFile.is_open())
             std::cout << "FAILED to open climate DATA file " << dataFileName << std::endl;
 
+        std::cout << std::endl;
         std::cout << "Reading climate DATA file " << dataFileName << std::endl;
 
         // only want to read 30 years of data
@@ -1041,6 +1056,16 @@ public:
             std::cout << "Off" << endl;
         }
 
+        std::cout << "   Cavitation fatigue in roots: ";
+        if (getValueFromConfig("i_stemOnly") == "n")
+        {
+            stem_only = false;
+            std::cout << "On" << endl;
+        } else {
+            stem_only = true; // Default
+            std::cout << "Off" << endl;
+        }
+
         // BA:GA optimization routine
         std::cout << std::endl;
         std::cout << "BAGA Optimization --------------------------------" << std::endl;
@@ -1144,6 +1169,17 @@ public:
         {
             std::cout << "Off" << std::endl;// default
         }
+
+        // File locations
+        std::cout << std::endl;
+        std::cout << "File locations -----------------------------------" << std::endl;
+        std::cout << "  Path to climate forcing data: " << std::endl;
+        climate_forcing_data_path = getValueFromConfig("i_ClimateData");
+        std::cout << climate_forcing_data_path << std::endl;
+        
+        std::cout << "   Path to growing season data: " << std::endl;
+        growing_season_limits_data_path = getValueFromConfig("i_GSData");
+        std::cout << growing_season_limits_data_path << std::endl;
     }
 
     void readin() //'inputs and calculates all parameters at the start
@@ -1212,12 +1248,126 @@ public:
         xh = getValueFromParDbl("i_soilXHeight",species_no) * 100.0; // height above soil surface for understory wind and gh in cm
 
         // hydraulics
-        br = getValueFromParDbl("i_br",species_no); // weibull b for each root element
-        cr = getValueFromParDbl("i_cr",species_no); // weibull c for each root element
-        bs = getValueFromParDbl("i_bs",species_no); // weibull b for each stem element
-        cs = getValueFromParDbl("i_cs",species_no); // weibull c for each stem element
-        bl = getValueFromParDbl("i_bl",species_no); // weibull b for each leaf element
-        cl = getValueFromParDbl("i_cl",species_no); // weibull c for each leaf element
+        // ROOTS
+        p12_r = getValueFromParDbl("i_rootP12",species_no);
+        p50_r = getValueFromParDbl("i_rootP50",species_no);
+        std::cout << "Testing new hydraulics parameterization, root p12: " << p12_r << std::endl;
+        std::cout << "Testing new hydraulics parameterization, root p50: " << p50_r << std::endl;
+        cr = get_cweibull(p12_r,p50_r);// weibull c for each root element
+        br = get_bweibull(p12_r,cr);// weibull b for each root element
+        std::cout << "Testing new hydraulics parameterization, root c: " << cr << std::endl;
+        std::cout << "Testing new hydraulics parameterization, root b: " << br << std::endl;
+        if (hysteresis == true && stem_only == false)
+        {
+            sapwoodT = getValueFromParDbl("i_sapwoodT",species_no);
+            conduitD = getValueFromParDbl("i_conduitDiam",species_no);
+            if (gs_yearIndex == 1)
+            {
+                p50r_fatigue[0] = p50_r; // current year fresh xylem vulnerability
+                p50r_fatigue[1] = xylem_fatigue_p50(p50_r); // accounting for drought stress in previous year (1 year old)
+                p50_r = ((p50r_fatigue[0] * 1.0) + (p50r_fatigue[1] * 0.75)) / (1.0+0.75); // updated parameter b for roots
+                std::cout << "Testing cavitation fatigue, current year root P50: " << p50r_fatigue[0] << std::endl;
+                std::cout << "  Testing cavitation fatigue, 1 year old root P50: " << p50r_fatigue[1] << std::endl;
+            } else if(gs_yearIndex == 2) 
+            {
+                p50r_fatigue[0] = p50_r; // current year "fresh xylem"
+                p50r_fatigue[2] = p50r_fatigue[1]; // previous year ring now 1 year older (2 years old)
+                p50r_fatigue[1] = xylem_fatigue_p50(p50_r); // accounting for drought stress in previous year (1 year old)
+                p50_r = ((p50r_fatigue[0] * 1.0) + (p50r_fatigue[1] * 0.75) + (p50r_fatigue[2] * 0.50)) / (1.0+0.75+0.50);// updated parameter b for roots
+                std::cout << "Testing cavitation fatigue, current year root P50: " << p50r_fatigue[0] << std::endl;
+                std::cout << "  Testing cavitation fatigue, 1 year old root P50: " << p50r_fatigue[1] << std::endl;
+                std::cout << " Testing cavitation fatigue, 2 years old root P50: " << p50r_fatigue[2] << std::endl;
+
+            } else if (gs_yearIndex >= 3)
+            {   
+                p50r_fatigue[0] = p50_r;// current year "fresh xylem"
+                p50r_fatigue[3] = p50r_fatigue[2]; // 2 years old ring now 3 years old
+                p50r_fatigue[2] = p50r_fatigue[1]; // previous year ring now 1 year older (2 years old)
+                p50r_fatigue[1] = xylem_fatigue_p50(p50_r); // accounting for drought stress in previous year (1 year old)
+                p50_r = ((p50r_fatigue[0] * 1) + (p50r_fatigue[1] * 0.75) + (p50r_fatigue[2] * 0.5) + (p50r_fatigue[3] * 0.25))/(1.0+0.75+0.5+0.25);// updated parameter b for roots
+                std::cout << "Testing cavitation fatigue, current year root P50: " << p50r_fatigue[0] << std::endl;
+                std::cout << "  Testing cavitation fatigue, 1 year old root P50: " << p50r_fatigue[1] << std::endl;
+                std::cout << " Testing cavitation fatigue, 2 years old root P50: " << p50r_fatigue[2] << std::endl;
+                std::cout << " Testing cavitation fatigue, 3 years old root P50: " << p50r_fatigue[3] << std::endl;
+            } else 
+            {
+                // we don't account for cavitation fatigue in the first year unless we now about it
+            }
+            cr = get_cweibull(p12_r,p50_r);// weibull c for each root element
+            br = get_bweibull(p12_r,cr);// weibull b for each root element
+            std::cout << "Testing new hydraulics parameterization, updated root c: " << cr << std::endl;
+            std::cout << "Testing new hydraulics parameterization, updated root b: " << br << std::endl;
+        }
+        
+        // STEMS
+        p12_s = getValueFromParDbl("i_stemP12",species_no);
+        p50_s = getValueFromParDbl("i_stemP50",species_no);
+        std::cout << "Testing new hydraulics parameterization, stem p12: " << p12_s << std::endl;
+        std::cout << "Testing new hydraulics parameterization, stem p50: " << p50_s << std::endl;
+        cs = get_cweibull(p12_s,p50_s);// weibull c for each root element
+        bs = get_bweibull(p12_s,cs);// weibull b for each root element
+        std::cout << "Testing new hydraulics parameterization, stem c: " << cs << std::endl;
+        std::cout << "Testing new hydraulics parameterization, stem b: " << bs << std::endl;
+        if (hysteresis == true)
+        {
+            sapwoodT = getValueFromParDbl("i_sapwoodT",species_no);
+            conduitD = getValueFromParDbl("i_conduitDiam",species_no);
+            if(gs_yearIndex == 1)
+            {
+                p50s_fatigue[0] = p50_s; // current year "fresh xylem"
+                p50s_fatigue[1] = xylem_fatigue_p50(p50_s);// accounting for drought stress in previous year (1 year old)
+                p50_s = ((p50s_fatigue[0] * 1.0) + (p50s_fatigue[1] * 0.75)) / (1.0+0.75); // updated parameter b for stems
+                std::cout << "Testing cavitation fatigue, current year stem P50: " << p50s_fatigue[0] << std::endl;
+                std::cout << "  Testing cavitation fatigue, 1 year old stem P50: " << p50s_fatigue[1] << std::endl;
+            } else if(gs_yearIndex == 2) 
+            {
+                p50s_fatigue[0] = p50_s; // current year "fresh xylem"
+                p50s_fatigue[2] = p50s_fatigue[1]; // previous year ring now 1 year older (2 years old)
+                p50s_fatigue[1] = xylem_fatigue_p50(p50_s); // accounting for drought stress in previous year (1 year old)
+                p50_s = ((p50s_fatigue[0] * 1.0) + (p50s_fatigue[1] * 0.75) + (p50s_fatigue[2] * 0.50)) / (1.0+0.75+0.50);// updated parameter b for stems
+                std::cout << "Testing cavitation fatigue, current year stem P50: " << p50s_fatigue[0] << std::endl;
+                std::cout << "  Testing cavitation fatigue, 1 year old stem P50: " << p50s_fatigue[1] << std::endl;
+                std::cout << " Testing cavitation fatigue, 2 years old stem P50: " << p50s_fatigue[2] << std::endl;
+
+            } else if (gs_yearIndex >= 3)
+            {   
+                p50s_fatigue[0] = p50_s;// current year "fresh xylem"
+                p50s_fatigue[3] = p50s_fatigue[2]; // 2 years old ring now 3 years old
+                p50s_fatigue[2] = p50s_fatigue[1]; // previous year ring now 1 year older (2 years old)
+                p50s_fatigue[1] = xylem_fatigue_p50(p50_s); // accounting for drought stress in previous year (1 year old)
+                p50_s = ((p50s_fatigue[0] * 1) + (p50s_fatigue[1] * 0.75) + (p50s_fatigue[2] * 0.5) + (p50s_fatigue[3] * 0.25))/(1.0+0.75+0.5+0.25);// updated parameter b for stems
+                std::cout << "Testing cavitation fatigue, current year stem P50: " << p50s_fatigue[0] << std::endl;
+                std::cout << "  Testing cavitation fatigue, 1 year old stem P50: " << p50s_fatigue[1] << std::endl;
+                std::cout << " Testing cavitation fatigue, 2 years old stem P50: " << p50s_fatigue[2] << std::endl;
+                std::cout << " Testing cavitation fatigue, 3 years old stem P50: " << p50s_fatigue[3] << std::endl;
+            } else 
+            {
+                // we don't account for cavitation fatigue in the first year unless we now about it
+            }
+            cs = get_cweibull(p12_s,p50_s);// weibull c for each root element
+            bs = get_bweibull(p12_s,cs);// weibull b for each root element
+            std::cout << "Testing new hydraulics parameterization, updated stem c: " << cs << std::endl;
+            std::cout << "Testing new hydraulics parameterization, updated stem b: " << bs << std::endl;
+        }
+
+        // LEAVES, no histeresis in leaves. Leaf xylem can be replaced//refilled more actively.
+        p12_l = getValueFromParDbl("i_leafP12",species_no);
+        p50_l = getValueFromParDbl("i_leafP50",species_no);
+        std::cout << "Testing new hydraulics parameterization, leaf p12: " << p12_l << std::endl;
+        std::cout << "Testing new hydraulics parameterization, leaf p50: " << p50_l << std::endl;
+        cl = get_cweibull(p12_l,p50_l);// weibull c for each root element
+        bl = get_bweibull(p12_l,cl);// weibull b for each root element
+        std::cout << "Testing new hydraulics parameterization, leaf c: " << cl << std::endl;
+        std::cout << "Testing new hydraulics parameterization, leaf b: " << bl << std::endl;
+        
+        // OLD PARAMETERIZATION, WILL DELETE...
+        // br = getValueFromParDbl("i_br",species_no); // weibull b for each root element
+        // cr = getValueFromParDbl("i_cr",species_no); // weibull c for each root element
+        // bs = getValueFromParDbl("i_bs",species_no); // weibull b for each stem element
+        // cs = getValueFromParDbl("i_cs",species_no); // weibull c for each stem element
+        // bl = getValueFromParDbl("i_bl",species_no); // weibull b for each leaf element
+        // cl = getValueFromParDbl("i_cl",species_no); // weibull c for each leaf element
+
         leafpercent = getValueFromParDbl("i_leafPercRes",species_no); // saturated % of tree R in leaves
         //[HNT] calculate and output the stem and root percent resistances @ ksat
         double stempercent = 1.0 / 3.0 * (100.0 - leafpercent); // saturated % of tree R in stem
@@ -1408,9 +1558,10 @@ public:
         e = 0;
         br = 0;
         cr = 0;
-
+        meanPLC = 0;
+        sapwoodT = 0;
+        conduitD = 0;
         x = 0;
-
         ksh = 0;
 
         for (iii = 0; iii < 6; iii++)
@@ -2038,7 +2189,7 @@ public:
         long startRow = 2; // skipping the header
         double ca_year;
         for (long gsC = 0; gsC <= maxYears; gsC++)
-        { // note this list had no header so we don't skip the first row  
+        {
             gsC = gsC;
             if (yearNum == GSCells[gsC+startRow][1] && GSCells[gsC+startRow][4] > 0) {
                 ca_year = GSCells[gsC+startRow][4]; // get current year atmospheric CO2 in ppm
@@ -2671,6 +2822,37 @@ public:
     }
     
     /* MODULE 4: Plant hydrodynamics */
+
+    double get_cweibull(const double &px1, const double &px2)
+    {
+        // c = (log(x = log(x = 1-x1/100)/log(x = 1-x2/100)))/(log(x = px1)-log(x = px2))
+        double numerator = -1.690515;// way simpler log( log(1 - 12/100) / log(1 - 50/100) ) = -1.690515
+        double pxden = log(px1 * -1) - log(px2 *-1);
+        return numerator / pxden;
+    }
+
+    double get_bweibull(const double &px1, double &c) 
+    {   
+        // b = px1 / ( -1 * log(1-x1/100))^(1/c)
+        double x1 = 0.1278334;// way simpler -log(1 - 12/100) = 0.1278334
+        double px1_abs = px1 * -1; // absolute value of px
+        double pow_c = 1 / c;
+        double denominator = pow(x1,pow_c);
+        return px1_abs / denominator;
+    }
+
+    double xylem_fatigue(double &PX)// function that accounts for xylem cavitation fatigue
+    {
+        double recoveryRate = sapwoodT * conduitD;
+        return (PX * (100 - meanPLC)) / (recoveryRate + (100 - meanPLC));
+    }
+
+    double xylem_fatigue_p50(double &p50)// using p50 as main parameter
+    {
+        double recoveryRate = sapwoodT * conduitD;
+        //double p50abs = p50*-1;
+        return (p50 * (100 - meanPLC)) / (recoveryRate + (100 - meanPLC));
+    }
     
     //'ROOT BLOCK OF SUBROUTINES
 
@@ -3031,7 +3213,7 @@ public:
         }
     }
     
-    // WHOLE PLANT BLOCKE OF SOUBROUTINES
+    // WHOLE PLANT BLOCK OF SOUBROUTINES
    
     void updatecurves() //'resets element E(P) curves
     {
@@ -4891,7 +5073,9 @@ public:
     }
 
     void modelProgramNewYear()
-    {
+    {   
+        std::cout << std::endl;
+        std::cout << "Starting new year" << std::endl;
         // save the iterate-able water system states
         std::string oldGround;
         std::string oldRaining;
@@ -4899,11 +5083,11 @@ public:
         oldGround = ground;
         oldRaining = raining;
         oldRainEnabled = rainEnabled;
-
+        
         // clear all the model variables
         cleanModelVars(); //initialize all used variables to avoid any memory effect from previous runs
+        meanPLC = gs_ar_PLCSum[gs_yearIndex-1] / gs_ar_PLCSum_N[gs_yearIndex-1];// previous year mean PLC?
         readin(); // get all the parameters again
-        //InitialConditions();
 
         gs_prevDay = 0;
         gs_inGrowSeason = false;
@@ -5156,6 +5340,7 @@ long ModelProgram::modelProgramMain() //program starts here
             dSheet.fCells(rowD + iter_Counter + 1 + gsCount /* *40 */, colD /*+ gsCount * 16*/ + dColF_GS_ET + 7) = laperba; // need this for the final calcs
                                                                                                                             //dSheet.fCells(rowD + iter_Counter + 1 + gsCount /* *40 */, colD /*+ gsCount * 16*/ + dColF_GS_ET + 7) = gs_ar_kPlantMean[gsCount] / gs_ar_kPlantMean_N[gsCount];
             dSheet.fCells(rowD + iter_Counter + 1 + gsCount /* *40 */, colD /*+ gsCount * 16*/ + dColF_GS_ET + 8) = gs_ar_PLCSum[gsCount] / gs_ar_PLCSum_N[gsCount];
+
             dSheet.fCells(rowD + iter_Counter + 1 + gsCount /* *40 */, colD /*+ gsCount * 16*/ + dColF_GS_ET + 9) = gs_ar_waterFinal[gsCount] - gs_ar_waterInitial[gsCount];
             dSheet.fCells(rowD + iter_Counter + 1 + gsCount /* *40 */, colD /*+ gsCount * 16*/ + dColF_GS_ET + 10) = gs_ar_waterInitial[gsCount]; // we want to know what the initial was too, in case it's not FC
 
@@ -5186,6 +5371,7 @@ long ModelProgram::modelProgramMain() //program starts here
             break; //quit the loop if we reach the end of the growing seasons list early somehow
         } // End If
     } // Next gsCount
+    std::cout << std::endl;
     saveOutputSheet("./" + stageNames[stage_ID] + "_OUTPUT_timesteps", "timesteps");
     saveOutputSheet("./" + stageNames[stage_ID] + "_OUTPUT_summary", "summary");
 
@@ -5202,7 +5388,6 @@ int main()
     stageNames[STAGE_ID_NONE] = "standard"; //stage IDs and names are related to various modes the model was designed to run in for specific projects -- that code has been removed, but a few vestiges remain
 
     long result = 0;
-    std::cout << "Model Startup." << std::endl;
 
     // to do a normal run that's only based on local folder parameter sheet settings, set the stage_ID to zero
     mainProg.stage_ID = STAGE_ID_NONE;
@@ -5210,11 +5395,13 @@ int main()
 
     if (!result)
     {
+        std::cout << std::endl;
         std::cout << "Model Failure! Stage " << mainProg.stage_ID << std::endl;
         return 0;
     }
     else
     {
+        std::cout << std::endl;
         std::cout << "Model Success! Stage " << mainProg.stage_ID << std::endl;
     }
     return 1;
