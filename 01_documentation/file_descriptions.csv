@@ -1,108 +1,108 @@
-﻿File: parameter_data.csv,,,
+﻿File: parameters_2.0.0.csv,,,
 Description: Each row represents a possible plant functional type or a species. Each column a parameter.,,,
-cell reference,grouping,parameter,description
-1,site,region,name of the region where the simulations take place
-2,site,siteID,site/simulation ID. This ID is used for naming the result files that are exported
-3,site,lat,latitude in degree fraction north
-4,site,long,longitude in degree fraction west
-5,site,species,species or PFT represented in parameter data
-6,site,altitude,site elevation in m above sea level
-7,site,slope,slope inclination; degrees from horizontal
-8,site,slope_asp,slope aspect; counterclockwise degrees from south
-9,sky,tau,atmospheric transmittance from weather data (set to 0.65 as default if no data available)
-10,sky,tsncorr,solar noon correction from weather data in hours
-11,sky,emiss,long wave emissivity
-12,soil,texture,USDA soil texture category (equal for all layers but could also be determined per layer)
-13,soil,layers,number of soil layers (select 1-5)
-14,soil,rockfrac,fraction of soil volume as rocks (0-1)
-15,soil,rhizopercent,average percent of whole plant resistance in rhizosphere (maximum soil limitation)
-16,soil,ffc,percent field capacity for starting the season
-17,soil,fieldcapfrac,fraction that field capacity is of saturation (minus residual)
-18,soil,soilabssol,absorptivity of soil surface for solar
-19,watertable,pground,ground water pressure
-20,watertable,grounddistance,distance to ground water source in m from the bottom of the rootsystem
-21,stand,baperga,basal area per ground area m2 ha-1
-22,stand,lai,canopy lai
-23,stand,heightabovesoil,height above soil surface for understory wind and gh in m
-24,stand,height,average tree height in m
-25,tree,aspect,max radius of root system per max depth
-26,tree,root_depth,maximum rooting depth in m
-27,tree,xang,leaf angle parameter; CN 15.4
-28,tree,laperba,initial leaf area per basal area per individual tree; m2 m-2
-29,tree,leafwidth,leaf width in m
-30,hydraulics,leafpercent,saturated % of tree resistance in leaves
-31,hydraulics,ksatp,kmax of tree in kg hr-1 m-2 MPa-1 per basal area
-32,hydraulics,root_p12,root element p12
-33,hydraulics,root_p50,root element p50
-34,hydraulics,stem_p12,stem p12
-35,hydraulics,stem_p50,stem p50
-36,hydraulics,leaf_p12,leaf p12
-37,hydraulics,leaf_p50,leaf p50
-38,hydraulics,pinc,"Pressure increment for curve generation, (MPa) - higher is faster, but less accurate (setting too high can cause Newton-Rhapson root pressure solving failure)"
-39,assimilation,vmax25,umol m-2 s-1; maximum carboxylation rate (vmax) at 25C
-40,assimilation,jmax25,umol m-2 s-1; maximum electron transport rate (jmax) at 25C
-41,assimilation,lightcomp,light compensation point in ppfd
-42,assimilation,qmax,quantum yield of electron transport; moles e per mols photons
-43,assimilation,kc25,m-m constant for CO2 in mole fraction at 25C. Bernacchi T response
-44,assimilation,ko25,m-m constant for O2 in mole fraction at 25C. Bernacchi T response
-45,assimilation,comp25,photorespiratory compensation point in mole fraction at 25C. Bernacchi T response
-46,assimilation,thetac,shape factor for A-ci colimitation
-47,assimilation,havmax,J mol-1; temp-dependency parameters from Leunig 2002
-48,assimilation,hdvmax,J mol-1; temp-dependency parameters from Leunig 2002
-49,assimilation,svvmax,J mol-1 K-1; temp-dependency parameters from Leunig 2002
-50,assimilation,hajmax,J mol-1; temp-dependency parameters from Leunig 2002
-51,assimilation,hdjmax,J mol-1; temp-dependency parameters from Leunig 2002
-52,assimilation,svjmax,J mol-1 K-1; temp-dependency parameters from Leunig 2002
-53,assimilation,lightcurv,temp-dependency parameters from Leunig 2002
-54,BAGA_optimizer,BAGA_ref,
-55,BAGA_optimizer,BAGA_start,
-56,BAGA_optimizer,BAGA_end,
-57,BAGA_optimizer,BAGA_inc,
-58,BAGA_optimizer,BAGA_KCO,WLT K dropoff threshold (fraction of reference iteration kmin)
-59,BAGA_optimizer,Gwater_inc,
-60,BAGA_optimizer,Gwater_start,
-61,BAGA_optimizer,Gwater_end,
-62,BAGA_optimizer,FFC_start,
-63,BAGA_optimizer,FFC_end,
-64,BAGA_optimizer,FFC_incr,Note: If FFC start < FFC end_ will start curve gen by incrementing FFC before ground water
-65,assimilation,CiCa_target,
+grouping,parameter,description,
+site,i_sp,species or PFT represented in parameter data,
+site,i_region,name of the region where the simulations take place,
+site,i_site,site/simulation ID. This ID is used for naming the result files that are exported,
+site,i_latitude,latitude in degree fraction north,
+site,i_longitude,longitude in degree fraction west,
+site,i_elevation,site elevation in m above sea level,
+site,i_slopeI,slope inclination; degrees from horizontal,
+site,i_slopeA,slope aspect; counterclockwise degrees from south,
+site,i_gWaterP,ground water pressure,
+site,i_gWaterDist,distance to ground water source in m from the bottom of the rootsystem,
+atmosphere,i_atmTrans,atmospheric transmittance from weather data (set to 0.65 as default if no data available),
+atmosphere,i_solarNoon,solar noon correction from weather data in hours,
+atmosphere,i_emiss,long wave emissivity,
+atmosphere,i_co2AmbPPM,"atmospheric/experiment CO2 ppm, it will update if working with multiple years",
+soil,i_layers,number of soil layers (select 1-5),
+soil,i_fieldCapFrac,fraction that field capacity is of saturation (minus residual),
+soil,i_fieldCapPercInit,percent field capacity for starting the season,
+soil,i_rockFrac,fraction of soil volume as rocks (0-1),
+soil,i_soilAbsSol,absorptivity of soil surface for solar,
+soil,i_rhizoPer,average percent of whole plant resistance in rhizosphere (maximum soil limitation),
+soil,i_texture,USDA soil texture category (equal for all layers but could also be determined per layer),
+stand,i_baperga,basal area per ground area m2 ha-1,
+stand,i_leafAreaIndex,canopy lai,
+stand,i_soilXHeight,height above soil surface for understory wind and gh in m,
+stand,i_height,average tree height in m,
+stand,i_treeToPhotoLAI,,
+stand,i_leafPerBasal,initial leaf area per basal area per individual tree; m2 m-2,
+tree,i_leafWidth,leaf width in m,
+tree,i_leafAngleParam,leaf angle parameter; CN 15.4,
+tree,i_aspect,max radius of root system per max depth,
+tree,i_rootDepth,maximum rooting depth in m,
+hydraulics,i_leafPercRes,saturated % of tree resistance in leaves,
+hydraulics,i_kmaxTree,kmax of tree in kg hr-1 m-2 MPa-1 per basal area,
+hydraulics,i_pinc,"Pressure increment for curve generation, (MPa) - higher is faster, but less accurate (setting too high can cause Newton-Rhapson root pressure solving failure)",
+hydraulics,i_rootP12,root element p12,
+hydraulics,i_rootP50,root element p50,
+hydraulics,i_stemP12,stem p12,
+hydraulics,i_stemP50,stem p50,
+hydraulics,i_leafP12,leaf p12,
+hydraulics,i_leafP50,leaf p50,
+hydraulics,i_sapwoodT,change in sapwood per change in diameter at breast height,
+hydraulics,i_conduitDiam,vessel or tracheid diameter in um,
+photosynthesis,i_qMax,quantum yield of electron transport; moles e per mols photons,
+photosynthesis,i_vmax25,umol m-2 s-1; maximum carboxylation rate (vmax) at 25C,
+photosynthesis,i_jmax25,umol m-2 s-1; maximum electron transport rate (jmax) at 25C,
+photosynthesis,i_kc25,m-m constant for CO2 in mole fraction at 25C. Bernacchi T response,
+photosynthesis,i_ko25,m-m constant for O2 in mole fraction at 25C. Bernacchi T response,
+photosynthesis,i_comp25,photorespiratory compensation point in mole fraction at 25C. Bernacchi T response,
+photosynthesis,i_thetaC,shape factor for A-ci colimitation,
+photosynthesis,i_havmax,J mol-1; temp-dependency parameters from Leunig 2002,
+photosynthesis,i_hdvmax,J mol-1; temp-dependency parameters from Leunig 2002,
+photosynthesis,i_svvmax,J mol-1 K-1; temp-dependency parameters from Leunig 2002,
+photosynthesis,i_lightCurv,temp-dependency parameters from Leunig 2002,
+photosynthesis,i_lightComp,light compensation point in ppfd,
+photosynthesis,i_hajmax,J mol-1; temp-dependency parameters from Leunig 2002,
+photosynthesis,i_hdjmax,J mol-1; temp-dependency parameters from Leunig 2002,
+photosynthesis,i_svjmax,J mol-1 K-1; temp-dependency parameters from Leunig 2002,
+BAGA_optimizer,i_iter_gwInc,,
+BAGA_optimizer,i_iter_gwStart,,
+BAGA_optimizer,i_iter_gwEnd,,
+BAGA_optimizer,i_iter_ffcInc,Note: If FFC start < FFC end_ will start curve gen by incrementing FFC before ground water,
+BAGA_optimizer,i_iter_ffcStart,,
+BAGA_optimizer,i_iter_ffcEnd,,
+BAGA_optimizer,i_iter_bagaInc,,
+BAGA_optimizer,i_iter_bagaStart,,
+BAGA_optimizer,i_iter_bagaEnd,,
+BAGA_optimizer,i_iter_bagaRef,,
+BAGA_optimizer,i_iter_bagaCutoff,WLT K dropoff threshold (fraction of reference iteration kmin),
 ,,,
-File: model_controls.csv,,,
+,,,
+File: configuration_2.0.0.csv,,,
 Description: This file has the instructions associated with the model running configuration,,,
-cell reference,grouping,parameter,description
-1,hydraulics,hysteresis,turns on/off xylem hysteresis to carry effects from previous growing season. Values: off; on
-2,hydraulics,refilling,turns on/off xylem refilling within a growing season. Values: off; 1 on
-3,hydraulics,predawns,turns on/off if model should consider measured pre-dawn water potential values. Values: off; on
-4,soil,ground,turns on/off groundwater flow. Values: off; on
-5,soil,soilred,turns on/off soil redistribution routine. Values: off; on
-6,soil,sevap,turns on/off soil evaporation routine. Values: off; on
-7,soil,bucket,tunrs on/off bucket option that blocks drainage through the bottom and allows reaching saturation. Values: off; on
-8,climate,raining,turns on/off rain inputs. Values: off; on
-9,climate,GS_mode,turns on/off growing season data for multiple year modeling. Vakyes: off; on
-10,climate,reset_kmax,tunrs on/off reseting kmax at the beginning of each growing season. Values: off (continues the run with the accumulated losses in conductivity); on (resets kmax) 
-11,climate,nonGS_water,water budget during non growing season (nonGS). Values: off (no water budget and soil filled to fraction of field capacity at beginning of new GS); 1 (computes water budget during nonGS)
-12,climate,nonGS_evaporation,soil evaporation during non growing season (nonGS)  if nonGS_water == on. Values: off; 1 on
-13,stand,multi_sp,turns on/off whether our model configuration has 1 species per site (monodominant) or multiple species per site (diverse). Values: off; on
-14,stand,species_no,number of species/PFT
-15,BAGA_optimizer,runSupplyCurve,turns all iteration on/off
-16,BAGA_optimizer,useAreaTable,if y will pull GA:BA_ LA:BA_ LAI from AreaData table per year and per site
-17,BAGA_optimizer,iterGroundWater,
-18,BAGA_optimizer,iterFFC,
-19,BAGA_optimizer,iterBAGA,Increate the BA:GA to find the basal area that puts the stand in ecohydrological equilibrium with the weather conditions
-20,BAGA_optimizer,yearsAsCounts,"The ""year"" values represent different data set ID's_ not actual years. In this mode the ""start"" year is always 0"
-21,BAGA_optimizer,SiteCode,Used for finding data from other sheets (like the AreaData sheet)
-22,Chain_Runs,Filename,"When the run terminates_ will look for an OPEN workbook with this name and execute the model run on it. Use this to ""chain"" runs for different sites together. Auto-save the workbook (as OUTPUT_workbookName.xlsm) on completion of iteration"
-23,Chain_Runs,BAGA_Send,Send the optimated BA:GA to the next program in the chain?
-24,Assimilation,ci_acclimation,Acclimate internal CO2
-25,BAGA_optimizer,GS_Data_OPT,
+grouping,model_control,default_value,description
+soil,i_gWaterEnable,n,turns on/off groundwater flow. Values: n (off); y (on)
+soil,i_soilRedEnable,y,turns on/off soil redistribution routine. Values: n (off); y (on)
+soil,i_soilEvapEnable,y,turns on/off soil evaporation routine. Values: n (off); y (on)
+climate,i_rainEnable,y,turns on/off rain inputs. Values: n (off); y (on)
+climate,i_useGSDataStress,y,turns on/off growing season data for multiple year modeling. Vakyes: n (off); y (on)
+climate,i_useGSDataOpt,y,turns on/off growing season data for multiple year modeling during BAGA. Vakyes: n (off); y (on)
+hydraulics,i_refilling,n,turns on/off xylem refilling within a growing season. Values: n (off); y (on)
+hydraulics,i_predawnsMode,n,turns on/off if model should consider measured pre-dawn water potential values. Values: n (off); y (on)
+hydraulics,i_cavitFatigue,n,turns on/off xylem hysteresis to carry effects from previous growing season. Values: n (off); y (on)
+hydraulics,i_stemOnly,y,turns on/off xylem hysteresis in stems and roots. Values: n (off); y (on)
+baga,i_iter_gwEnable,n,
+baga,i_iter_ffcEnable,n,
+baga,i_iter_bagaEnable,n,Increate the BA:GA to find the basal area that puts the stand in ecohydrological equilibrium with the weather conditions. Values: n (off); y (on)
+baga,i_iter_useAreaTable,n,if y will pull GA:BA_ LA:BA_ LAI from AreaData table per year and per site. Values: n (off); y (on)
+baga,i_iter_yearsAsCount,n,"The ""year"" values represent different data set ID's_ not actual years. In this mode the ""start"" year is always 0. Values: n (off); y (on)"
+baga,i_iter_runSupplyCurve,n,turns all iteration. Values: n (off); y (on)
+community,i_multipleSP,n,turns on/off whether our model configuration has 1 species per site (monodominant) or multiple species per site (diverse). Values: n (off); y (on)
+community,i_speciesN,1,number of species/PFT to run the model for
+forcing_files,i_ClimateData,/Users/usr/Library/Documents/climate_forcing_files/dataset.csv,path to file with climate forcing files
+forcing_files,i_GSData,/Users/usr/Library/Documents/climate_forcing_files/seasonlimits_2.0.0.csv,path to file with growing season length
 ,,,
-File: seasonlimits.csv,,,
+,,,
+File: seasonlimits_2.0.0.csv,,,
 Description: Each row represents a year. Each column a yearly characteristic.,,,
 Column,Description,,
 Year,Year for which growing season limits are known,,
 Day_start,Day of the year in which growing season starts,,
 Day_end,Day of the year in which growing season ends,,
-Ca_ppm,Atmospheric carbon dioxide concentration for each year. It will be used as part of the parameter data.,,
+Ca_ppm,Atmospheric carbon dioxide concentration for each year.,,
 ,,,
 File: dataset.csv,,,
 Description: file with the climate forcing variables used in the model where every row is a time-step,,,

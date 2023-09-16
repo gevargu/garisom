@@ -298,30 +298,40 @@ public:
     bool hysteresis, stem_only;
     std::string climate_forcing_data_path, growing_season_limits_data_path;
 
-    // Site identifiers
+    // Site identifiers & parameters
     std::string species, region, siteID;
-    
-    // Soils Parameters
+    double lat, longitude, slope, slopeasp, alt;
+
+    // Atmospheric parameters
+    double tau, tsncorr, ca, emiss;
+
+    // Soil parameters
     std::string texture;
+    long layers;
+    double rockfrac, rhizotarg, ffc, fieldcapfrac, pground, grounddistance, soilabssol;
     
-    // Plant community parameters
+    // Plant community & stand parameters
     long species_no, sp_n;
     std::string species_no_string;
+    double treeToPhotoLAI, lai, xang, laperba, height, aspect, rootdepth, beta, leafwidth, baperga, xh;
 
     // Plant hydrodynamics
-    double p12_r, p50_r, p12_s, p50_s, p12_l, p50_l;
+    double p12_r, p50_r, p12_s, p50_s, p12_l, p50_l, br, cr, bs, cs, bl, cl, leafpercent, ksatp, pinc;
+    double meanPLC, oldmeanPLC, sapwoodT, conduitD, p50s_fatigue[4], p50r_fatigue[4];// Xylem hysteresis routine
 
-    // Xylem hysteresis
-    double meanPLC, oldmeanPLC, sapwoodT, conduitD, p50s_fatigue[4], p50r_fatigue[4];
+    // Carbon assimilation
+    double lightcomp, qmax, vmax25, jmax25, kc25, ko25, comp25, thetac, havmax, hdvmax, svvmax, hajmax, hdjmax, svjmax, lightcurv;
+
+    // Calculated by readin()
 
     // old definitions
     double *p_kr, *p_erh, *p_er, *p_krh, *p_tkr, *p_ter;
     double *p_elayer, *p_prhizo;
     double *p_jmatrix;
     double *p_kroot;
-    double e, br, cr, n[6], a[6], x, ksatrh[6], kmaxrh[6], ksatr[6], kmaxr[6], ksh;
-    double bs, cs, bl, cl, ksats, ksatl, el[100001], es[100001], pcrits, pcritl, ps, tel[100001], tes[100001];
-    double pinc, einc, pd[6], ksatp, rsatp, ksatroot, vp;
+    double e, n[6], a[6], x, ksatrh[6], kmaxrh[6], ksatr[6], kmaxr[6], ksh;
+    double ksats, ksatl, el[100001], es[100001], pcrits, pcritl, ps, tel[100001], tes[100001];
+    double einc, pd[6], rsatp, ksatroot, vp;
     double s, del, eps, epsx, sthresh, sum, sums, olds, kmin;
     double kr[6][100001], erh[6][100001], er[6][100001], krh[6][100001], tkr[6][100001], ter[6][100001];
     double elow, ehigh, plow, prh[6], estart, efinish, flow, dfrdpr, frt;
@@ -340,29 +350,28 @@ public:
     double dp, kplant[100001], kminplant, toplayer;
     double dedp[100001], pleaf[100001], dedpf[1000001], p1, p2, pl;
     double plold, predawn, dedpl, prtarget;
-    double kmaxs, pstarget, kmaxl, pltarget, rhizsat, rootsat, sum2, beta, depth[6], rhizok;
+    double kmaxs, pstarget, kmaxl, pltarget, rhizsat, rootsat, sum2, depth[6], rhizok;
     double patm, vpd, dedplzero;
     double gcmd, dpmax, gmax, vpdsat;
-    long pstop, halt, failure, k, check, t, j, it, f, dd, tmax, tnm, layer[6], tlayer[6], test, layers, d, z, p, pmax, unknowns, i, imax, ii, ll, total;
-    double kplantold, frac, eincdef, aspect;
+    long pstop, halt, failure, k, check, t, j, it, f, dd, tmax, tnm, layer[6], tlayer[6], test, d, z, p, pmax, unknowns, i, imax, ii, ll, total;
+    double kplantold, frac, eincdef;
     double length[6], radius[6], vol, vertdistance[11], depthmax, shallow, coef;
-    double rhizotarg, rplant, rstem, rootr, rleaf, rhizor, rrhizofrac, kinc, kplantmax;
+    double rplant, rstem, rootr, rleaf, rhizor, rrhizofrac, kinc, kplantmax;
     double vgterm;
-    double ci, ca, gcanw[100001], gcanc[100001], marker, var, psyn[100001], transpiration;
+    double ci, gcanw[100001], gcanc[100001], marker, var, psyn[100001], transpiration;
     double dedpmax, amaxfrac[100001];
     double dpa[100001], lavpdmd;
     double psynact, psynmax, dpamax;
-    double lavpd[100001], grad, gha, numerator, denominator, lambda, emiss, airtemp, leaftemp[100001], rabs;
-    double laperba, par, qmax, vmax25, kc25, ko25, comp25, theta, wind, leafwidth;
+    double lavpd[100001], grad, gha, numerator, denominator, lambda, airtemp, leaftemp[100001], rabs;
+    double par, theta, wind;
     double comp, vmax, kc, ko, je, jc, eplantl[1000001], lavpdc1, lavpdsum, lavpdh, gmaxl, cin[1000001];
-    double cinc, jmax, jmax25, havmax, hdvmax, svvmax, hajmax, hdjmax, svjmax, jact, pleafv[1000001], maxvpd;
+    double cinc, jmax, jact, pleafv[1000001], maxvpd;
     double kloss[1000001], klossv[1000001], maxkloss;
     long chalk, skip, psynstop, totalv;
-    double lsc, timestep, leafpercent, dbh, height, pgrav, ffc, pground, grounddistance;
-    double water[6], fc[6], baperga, layerflow, soilredist[6], groundwater, deficit, rain, sumrain, swclimit[6], store, pend;
+    double lsc, timestep, dbh, pgrav;
+    double water[6], fc[6], layerflow, soilredist[6], groundwater, deficit, rain, sumrain, swclimit[6], store, pend;
     double kkmax[6], thetasat[6], groundflow, rday25, rday[100001], waterold, waternew, waterchange, soilf[6];
-    double drainage, gwflow, thetac;
-    double lat, longitude, slope, slopeasp, lai, xang;
+    double drainage, gwflow;
     double fet, et, sm, lc, tsn, sindec, dec, cosdec, tim, tod, coszen, zen, cosaz, az;
     double m, sp, sb, sd, st, cloud, obssolar, fcd, kbe, kbezero, mleafang;
     double rad, k1, t1, told, t2, kd, qd, qds, qdt, qb, qbt, qsc, qsh, qsl, laisl, laish, parsh, parsl, parbottom;
@@ -372,17 +381,17 @@ public:
     long haltsh;
     double leaftempsh[100001], lavpdsh[100001], rdaysh[100001];
     double gcanwsh[100001], gcancsh[100001], cinsh[100001], psynmaxsh, psynsh[100001], amaxfracsh[100001];
-    double transpirationtree, anetsh, anettree, atree, anet, rabssoil, alt, tsncorr;
-    double rha, rhs, soilevap, soilabssol, rough, zdispl, xh, zh, us, mdensair, soilep, emission, soiltemp;
+    double transpirationtree, anetsh, anettree, atree, anet, rabssoil;
+    double rha, rhs, soilevap, rough, zdispl, zh, us, mdensair, soilep, emission, soiltemp;
     std::string night, sevap, pet, rainsim;
     bool nightBool;
-    double tau, minwind;
+    double minwind;
     double thetafc[6], thetafracres[6], thetafracfc[6];
     long runmean, weird, sign, xx, runs, ticks;
-    double rmean, cutoff, dedplmin, amaxmax, lightcurv;
+    double rmean, cutoff, dedplmin, amaxmax;
     double emd, leaftmd, leaftshmd, lavpdshmd, gcanwmd, gcancmd, rdaymd, psynmd[100001], psynmaxmd;
     double cinmd, gcanwshmd, gcancshmd, rdayshmd, psynshmd[100001], cinshmd, psynmaxshmd;
-    double prinitial, dpasun, lightcomp, fieldcapfrac, rockfrac;
+    double prinitial, dpasun;
     double initialthreshold, inp[101];
     double kref, lscref, pdref, leafpercentref, kpday1, kxday1, runoff;
     long kmaxits, bst, startbst, scenario;
@@ -447,9 +456,6 @@ public:
 
     std::string raining;
     bool rainEnabled;
-
-    double treeToPhotoLAI;
-
     bool useGSData;
 
 
@@ -554,7 +560,6 @@ public:
     const double gas = 8.3144598; //'universal gas constant J mol-1K-1
     const double oa = 0.21; //'mole fraction of o2
     const double solar = 1362; //'solar constant W m-2
-                                //'Const tau = 0.65 'clear sky transmissivity, CN p. 173
     const double absolar = 0.5; //'absorptivity of solar for leaves
     const double abspar = 0.8; //'absorptivity of par for leaves
     const double absnir = 0.2; //'absorptivity of near infrared for leaves
@@ -1242,7 +1247,12 @@ public:
         laperba = getValueFromParDbl("i_leafPerBasal",species_no); // initial leaf area per basal area, m2 m - 2
         height = getValueFromParDbl("i_height",species_no); // average tree height in m
         aspect = getValueFromParDbl("i_aspect",species_no); // max radius of root system per max depth
-        beta = getValueFromParDbl("i_rootBeta",species_no); // root beta for Y = 1 - B ^ d
+        rootdepth = getValueFromParDbl("i_rootDepth",species_no); // maximum rooting depth
+        /* Root biomass distribution is allocated based on the equation reported in Love et al (2019):
+        M = 1 - Beta^d, where M is the fraction of biomass above depth d expressed in cm. We find the
+        Beta that provides an M of 0.995 for the maximum rooting depth. */
+        rootdepth = 1 / (rootdepth*100);
+        beta = pow(0.005,rootdepth); // Calculates Beta as: Beta = (1-M)^(1/rootdepth); where M = 0.995 and rootdepth is cm
         leafwidth = getValueFromParDbl("i_leafWidth",species_no) * 0.72; // leaf width x factor = characteristic dimension(campbell and norman)
         baperga = getValueFromParDbl("i_baperga",species_no) * 0.0001; // basal area per ground area converted from m2 / Ha to m2 / m2
         xh = getValueFromParDbl("i_soilXHeight",species_no) * 100.0; // height above soil surface for understory wind and gh in cm
@@ -1251,12 +1261,10 @@ public:
         // ROOTS
         p12_r = getValueFromParDbl("i_rootP12",species_no);
         p50_r = getValueFromParDbl("i_rootP50",species_no);
-        std::cout << "Testing new hydraulics parameterization, root p12: " << p12_r << std::endl;
-        std::cout << "Testing new hydraulics parameterization, root p50: " << p50_r << std::endl;
         cr = get_cweibull(p12_r,p50_r);// weibull c for each root element
         br = get_bweibull(p12_r,cr);// weibull b for each root element
-        std::cout << "Testing new hydraulics parameterization, root c: " << cr << std::endl;
-        std::cout << "Testing new hydraulics parameterization, root b: " << br << std::endl;
+        std::cout << "Hydraulics parameterization, root c: " << cr << std::endl;
+        std::cout << "Hydraulics parameterization, root b: " << br << std::endl;
         if (hysteresis == true && stem_only == false)
         {
             sapwoodT = getValueFromParDbl("i_sapwoodT",species_no);
@@ -1266,18 +1274,12 @@ public:
                 p50r_fatigue[0] = p50_r; // current year fresh xylem vulnerability
                 p50r_fatigue[1] = xylem_fatigue_p50(p50_r); // accounting for drought stress in previous year (1 year old)
                 p50_r = ((p50r_fatigue[0] * 1.0) + (p50r_fatigue[1] * 0.75)) / (1.0+0.75); // updated parameter b for roots
-                std::cout << "Testing cavitation fatigue, current year root P50: " << p50r_fatigue[0] << std::endl;
-                std::cout << "  Testing cavitation fatigue, 1 year old root P50: " << p50r_fatigue[1] << std::endl;
             } else if(gs_yearIndex == 2) 
             {
                 p50r_fatigue[0] = p50_r; // current year "fresh xylem"
                 p50r_fatigue[2] = p50r_fatigue[1]; // previous year ring now 1 year older (2 years old)
                 p50r_fatigue[1] = xylem_fatigue_p50(p50_r); // accounting for drought stress in previous year (1 year old)
                 p50_r = ((p50r_fatigue[0] * 1.0) + (p50r_fatigue[1] * 0.75) + (p50r_fatigue[2] * 0.50)) / (1.0+0.75+0.50);// updated parameter b for roots
-                std::cout << "Testing cavitation fatigue, current year root P50: " << p50r_fatigue[0] << std::endl;
-                std::cout << "  Testing cavitation fatigue, 1 year old root P50: " << p50r_fatigue[1] << std::endl;
-                std::cout << " Testing cavitation fatigue, 2 years old root P50: " << p50r_fatigue[2] << std::endl;
-
             } else if (gs_yearIndex >= 3)
             {   
                 p50r_fatigue[0] = p50_r;// current year "fresh xylem"
@@ -1285,29 +1287,23 @@ public:
                 p50r_fatigue[2] = p50r_fatigue[1]; // previous year ring now 1 year older (2 years old)
                 p50r_fatigue[1] = xylem_fatigue_p50(p50_r); // accounting for drought stress in previous year (1 year old)
                 p50_r = ((p50r_fatigue[0] * 1) + (p50r_fatigue[1] * 0.75) + (p50r_fatigue[2] * 0.5) + (p50r_fatigue[3] * 0.25))/(1.0+0.75+0.5+0.25);// updated parameter b for roots
-                std::cout << "Testing cavitation fatigue, current year root P50: " << p50r_fatigue[0] << std::endl;
-                std::cout << "  Testing cavitation fatigue, 1 year old root P50: " << p50r_fatigue[1] << std::endl;
-                std::cout << " Testing cavitation fatigue, 2 years old root P50: " << p50r_fatigue[2] << std::endl;
-                std::cout << " Testing cavitation fatigue, 3 years old root P50: " << p50r_fatigue[3] << std::endl;
             } else 
             {
                 // we don't account for cavitation fatigue in the first year unless we now about it
             }
             cr = get_cweibull(p12_r,p50_r);// weibull c for each root element
             br = get_bweibull(p12_r,cr);// weibull b for each root element
-            std::cout << "Testing new hydraulics parameterization, updated root c: " << cr << std::endl;
-            std::cout << "Testing new hydraulics parameterization, updated root b: " << br << std::endl;
+            std::cout << "Hydraulics parameterization, updated root c: " << cr << std::endl;
+            std::cout << "Hydraulics parameterization, updated root b: " << br << std::endl;
         }
         
         // STEMS
         p12_s = getValueFromParDbl("i_stemP12",species_no);
         p50_s = getValueFromParDbl("i_stemP50",species_no);
-        std::cout << "Testing new hydraulics parameterization, stem p12: " << p12_s << std::endl;
-        std::cout << "Testing new hydraulics parameterization, stem p50: " << p50_s << std::endl;
         cs = get_cweibull(p12_s,p50_s);// weibull c for each root element
         bs = get_bweibull(p12_s,cs);// weibull b for each root element
-        std::cout << "Testing new hydraulics parameterization, stem c: " << cs << std::endl;
-        std::cout << "Testing new hydraulics parameterization, stem b: " << bs << std::endl;
+        std::cout << "Hydraulics parameterization, stem c: " << cs << std::endl;
+        std::cout << "Hydraulics parameterization, stem b: " << bs << std::endl;
         if (hysteresis == true)
         {
             sapwoodT = getValueFromParDbl("i_sapwoodT",species_no);
@@ -1316,49 +1312,37 @@ public:
             {
                 p50s_fatigue[0] = p50_s; // current year "fresh xylem"
                 p50s_fatigue[1] = xylem_fatigue_p50(p50_s);// accounting for drought stress in previous year (1 year old)
-                p50_s = ((p50s_fatigue[0] * 1.0) + (p50s_fatigue[1] * 0.75)) / (1.0+0.75); // updated parameter b for stems
-                std::cout << "Testing cavitation fatigue, current year stem P50: " << p50s_fatigue[0] << std::endl;
-                std::cout << "  Testing cavitation fatigue, 1 year old stem P50: " << p50s_fatigue[1] << std::endl;
+                p50_s = ((p50s_fatigue[0] * 1.0) + (p50s_fatigue[1] * 0.75)) / (1.0+0.75); // updated parameter P50 for stems
             } else if(gs_yearIndex == 2) 
             {
                 p50s_fatigue[0] = p50_s; // current year "fresh xylem"
                 p50s_fatigue[2] = p50s_fatigue[1]; // previous year ring now 1 year older (2 years old)
                 p50s_fatigue[1] = xylem_fatigue_p50(p50_s); // accounting for drought stress in previous year (1 year old)
-                p50_s = ((p50s_fatigue[0] * 1.0) + (p50s_fatigue[1] * 0.75) + (p50s_fatigue[2] * 0.50)) / (1.0+0.75+0.50);// updated parameter b for stems
-                std::cout << "Testing cavitation fatigue, current year stem P50: " << p50s_fatigue[0] << std::endl;
-                std::cout << "  Testing cavitation fatigue, 1 year old stem P50: " << p50s_fatigue[1] << std::endl;
-                std::cout << " Testing cavitation fatigue, 2 years old stem P50: " << p50s_fatigue[2] << std::endl;
-
+                p50_s = ((p50s_fatigue[0] * 1.0) + (p50s_fatigue[1] * 0.75) + (p50s_fatigue[2] * 0.50)) / (1.0+0.75+0.50);// updated parameter P50 for stems
             } else if (gs_yearIndex >= 3)
             {   
                 p50s_fatigue[0] = p50_s;// current year "fresh xylem"
                 p50s_fatigue[3] = p50s_fatigue[2]; // 2 years old ring now 3 years old
                 p50s_fatigue[2] = p50s_fatigue[1]; // previous year ring now 1 year older (2 years old)
                 p50s_fatigue[1] = xylem_fatigue_p50(p50_s); // accounting for drought stress in previous year (1 year old)
-                p50_s = ((p50s_fatigue[0] * 1) + (p50s_fatigue[1] * 0.75) + (p50s_fatigue[2] * 0.5) + (p50s_fatigue[3] * 0.25))/(1.0+0.75+0.5+0.25);// updated parameter b for stems
-                std::cout << "Testing cavitation fatigue, current year stem P50: " << p50s_fatigue[0] << std::endl;
-                std::cout << "  Testing cavitation fatigue, 1 year old stem P50: " << p50s_fatigue[1] << std::endl;
-                std::cout << " Testing cavitation fatigue, 2 years old stem P50: " << p50s_fatigue[2] << std::endl;
-                std::cout << " Testing cavitation fatigue, 3 years old stem P50: " << p50s_fatigue[3] << std::endl;
+                p50_s = ((p50s_fatigue[0] * 1) + (p50s_fatigue[1] * 0.75) + (p50s_fatigue[2] * 0.5) + (p50s_fatigue[3] * 0.25))/(1.0+0.75+0.5+0.25);// updated parameter P50 for stems
             } else 
             {
                 // we don't account for cavitation fatigue in the first year unless we now about it
             }
             cs = get_cweibull(p12_s,p50_s);// weibull c for each root element
             bs = get_bweibull(p12_s,cs);// weibull b for each root element
-            std::cout << "Testing new hydraulics parameterization, updated stem c: " << cs << std::endl;
-            std::cout << "Testing new hydraulics parameterization, updated stem b: " << bs << std::endl;
+            std::cout << "Hydraulics parameterization, updated stem c: " << cs << std::endl;
+            std::cout << "Hydraulics parameterization, updated stem b: " << bs << std::endl;
         }
 
         // LEAVES, no histeresis in leaves. Leaf xylem can be replaced//refilled more actively.
         p12_l = getValueFromParDbl("i_leafP12",species_no);
         p50_l = getValueFromParDbl("i_leafP50",species_no);
-        std::cout << "Testing new hydraulics parameterization, leaf p12: " << p12_l << std::endl;
-        std::cout << "Testing new hydraulics parameterization, leaf p50: " << p50_l << std::endl;
         cl = get_cweibull(p12_l,p50_l);// weibull c for each root element
         bl = get_bweibull(p12_l,cl);// weibull b for each root element
-        std::cout << "Testing new hydraulics parameterization, leaf c: " << cl << std::endl;
-        std::cout << "Testing new hydraulics parameterization, leaf b: " << bl << std::endl;
+        std::cout << "Hydraulics parameterization, leaf c: " << cl << std::endl;
+        std::cout << "Hydraulics parameterization, leaf b: " << bl << std::endl;
         
         // OLD PARAMETERIZATION, WILL DELETE...
         // br = getValueFromParDbl("i_br",species_no); // weibull b for each root element
