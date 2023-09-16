@@ -1,9 +1,10 @@
 ﻿/* 
-# Carbon Gain vs. Hydraulic Risk Stomatal Optimization Model version: 2.0.0
+# Carbon Gain vs. Hydraulic Risk Stomatal Optimization Model version: 2.0.1
 
 ## Author: German Vargas G.
 ## Contact: german.vargas@utah.edu
-## Date: Jun-2023
+## Version 2.0.0 release date: Jun-2023
+## Current version date: Sept-2023
 
 ### Model structure (file extensions)
     Garisom
