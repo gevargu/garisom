@@ -1,4 +1,7 @@
-06/14/2022 - "2.0"
+09/15/2023 - "2.0.1"
+- Addition of the cavitation fatigue module, xylem parameterization via p12/p50, and the root beta calculation
+
+06/14/2023 - "2.0"
 - Creation of a developing branch alongside the new modular version of the model.
 
 11/8/2019 - "0.24"

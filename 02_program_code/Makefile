@@ -8,7 +8,7 @@
 
 all: garisom200
  
-garisom200: 01gainriskSOM.2.0.0.cpp
-	g++ -std=c++11 -O3 -ffast-math 01gainriskSOM.2.0.0.cpp \
+garisom201: 01gainriskSOM.2.0.1.cpp
+	g++ -std=c++11 -O3 -ffast-math 01gainriskSOM.2.0.1.cpp \
 	02Soils.cpp \
 	-o garisom2
