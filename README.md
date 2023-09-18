@@ -60,12 +60,12 @@ __b.5)__ Press <kbd>Command</kbd> + <kbd>C</kbd> if you want to stop the model b
 
 This version has also been tested with Visual Studio 2017's compiler with similar optimizations (floating point mode fast, maximum optimization preferring speed). The following files (included in this repository) should be located in the working directory (normally the same directory as the executable) before running:
 	
-  - __parameters.csv__ (site, atmospheric, soils, stand, plant, hydraulics, and carbon assimilation parameters).
-  - __model_config.csv__ (model controls)
+  - __parameters_2.0.0.csv__ (site, atmospheric, soils, stand, plant, hydraulics, and carbon assimilation parameters).
+  - __configuration_2.0.0.csv__ (model controls)
   - __dataset.csv__ (hourly weather drivers).
   - __dataheader.csv__ (a header row for the hourly data output).
   - __sumheader.csv__ (a header row for the summary data output).
-  - __seasonlimits.csv__ (growing season limits and yearly atmospheric CO2, only required if using "sequential year mode" described below)
+  - __seasonlimits_2.0.0.csv__ (growing season limits and yearly atmospheric CO2, only required if using "sequential year mode" described below)
 
 Upon completion, two output files are produced:
 	
@@ -82,11 +82,11 @@ __Noteworthy plant traits:__
 
 - Whole plant kMax (saturated whole-plant conductance).
 - Percent of resistance in leaves (determines how tree conductance is partitioned to woody vs. leaf elements).
-- Vulnerability curves (in the form of Weibull curve B and C parameters).
+- Vulnerability curves (in the form of P12 and P50).
 - Basal area/ground area (BA:GA, tree density or BAI).
 - Leaf area/basal area (together LA:BA and BA:GA determine LAI).
 - Leaf width.
-- Root Beta (controls rooting depth).
+- Root depth in m.
 - Maximum carboxylation rate at 25C, Vcmax25 (and associated maximum electron transport rate Jmax25, assumed to be Vmax25 * 1.67).
 
 __Important environment or site traits:__
@@ -97,17 +97,33 @@ __Important environment or site traits:__
 - Lat/lon.
 - Solar noon correction (offset between hour 12 in weather data and actual solar noon at this location)
 - Atmospheric "clear sky" transmittance (tau). Calibrates the amount of observed solar radiation considered to be "clear sky" (no clouds), generally between 0.6-0.75. See the equations in the "solarcalc" function if you would like to back-calculate transmittance from a observed clear sky data point.
-- __parameters - inputs worksheet.xlsx__ includes a "root and xylem worksheet" which can be used to calculate Weibull B and C values for the vulnerability curve from P50 and P98 values. If VC measurements are unavailable for certain elements of the plant other element curves can be substituted. This sheet also includes calculations for converting root "beta" values to total rooting depth in cm.
 - The soil parameters we used for many soil types can be found in the __Common Soil Types__ sheet of __parameters - inputs worksheet.xlsx__. __Note:__ Currently only supports using the same soil type for all active layers.
 - Soil layers count (Default: 5) can be up to 5. A higher number of soil layers provides a more robust soil water budget simulation, while fewer soil layers may improve performance slightly.
-- Enabling ground water (Default: n) provides an unlimited source of water at a set potential and distance below the root layers. This water will flow up into the soil layers, and potentially allow layers to fill above field capacity (from the bottom layer up). When disabled (default), the only sources of water input will be the initial fraction of field capacity and observed rainfall (and any water over field capacity will become "drainage").
-- Rain (Default: y) weather data rainfall will be ignored if disabled.
-- Refilling (Default: n) allows trees to restore lost conductance, however the refilling model is not sufficient to simulate authentic xylem refilling behavior and has not been thoroughly tested in the current version of the code.
-- Soil redistribution (Default: y) allows water to flow between soil layers
-- Soil evaporation (Default: y) enables simulation of water evaporation from the surface soil layer.
-- Use GS Data (Default: n) If enabled, multiple years will be run "sequentially" with on and off seasons defined in seasonlimits.csv. See "Sequential year mode" for details. When disabled (default), all weather timesteps provided are treated as part of the growing season and the user is expected to truncate individual years to their start/end days. Water budget is reset between years when disabled, treating years as totally independent.
-- Autosave is always enabled regardless of the setting, as this version of the model has no alternative output method. Output files will be generated in the working directory when the run completes.
-- Predawns Mode (Default: n): If set to 'y', disables soil simulation and runs from hourly inputs of canopy predawn water potential. These are read from the "rain" column (rain is not used with the soil sim disabled) in MPa. See "dataset - predawns example.csv". This mode is especially useful when comparing to other models which run from canopy predawn measurements, and generally runs significantly faster as it does not need to solve for root layer pressures.
+
+__Model Configuration:__
+
+| Group    	| Model Control       	    | Description          |
+| ------------- | ------------------------- | -------------------- |
+| Soil     	| __igWaterEnable__   	    | Turns on/off groundwater flow. Values: n (off); y (on). It provides an unlimited source of water at a set potential and distance below the root layers. This water will flow up into the soil layers, and potentially allow layers to fill above field capacity (from the bottom layer up). When disabled (default), the only sources of water input will be the initial fraction of field capacity and observed rainfall (and any water over field capacity will become "drainage").	|
+| Soil     	| __i_soilRedEnable__  	    | Turns on/off soil redistribution routine. Values: n (off); y (on). It allows water to flow between soil layers.	|
+| Soil     	| __i_soilEvapEnable__ 	    | Turns on/off soil evaporation routine. Values: n (off); y (on). It enables simulation of water evaporation from the surface soil layer.	|
+| Climate  	| __i_rainEnable__  	    | Turns on/off rain inputs. Values: n (off); y (on). It allows for precipitation events. Weather data rainfall will be ignored if disabled.	|
+| Climate  	| __i_useGSDataStress__     | Turns on/off growing season data for multiple year modeling. Vakyes: n (off); y (on). If enabled, multiple years will be run "sequentially" with on and off seasons defined in seasonlimits_2.0.0.csv and a continuous water budget. When disabled (default), all weather timesteps provided are treated as part of the growing season and the user is expected to truncate individual years to their start/end days. Water budget is reset between years when disabled, treating years as totally independent.	|
+| Climate	| __i_useGSDataOpt__ 	    | Turns on/off growing season data for multiple year modeling during BAGA optimization. Values: n (off); y (on).	|
+| Hydraulics  	| __i_refilling__ 	    | Turns on/off xylem refilling within a growing season. Values: n (off); y (on). It allows trees to restore lost conductance, however the refilling model is not sufficient to simulate authentic xylem refilling behavior and has __not been thoroughly tested in the current version of the code__.	|
+| Hydraulics  	| __i_predawnsMode__ 	    | Turns on/off if model should consider measured pre-dawn water potential values. Values: n (off); y (on). If set to 'y', disables soil simulation and runs from hourly inputs of canopy predawn water potential. These are read from the "rain" column (rain is not used with the soil sim disabled) in MPa. See "dataset - predawns example.csv". This mode is especially useful when comparing to other models which run from canopy predawn measurements, and generally runs significantly faster as it does not need to solve for root layer pressures.	|
+| Hydraulics  	| __i_cavitFatigue__ 	    | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
+| Hydraulics  	| __i_stemOnly__ 	    | Turns on/off xylem stress hysteresis only in stem xylem. Values: n (off); y (on). When disabled it allows for a weighted estimation of xylem vulnerability to embolism for both stem and roots	|
+| BAGA  	| __i_iter_gwEnable__ 	    | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
+| BAGA  	| __i_iter_ffcEnable__ 	    | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
+| BAGA  	| __i_iter_bagaEnable__     | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
+| BAGA  	| __i_iter_useAreaTable__   | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
+| BAGA  	| __i_iter_yearsAsCount__   | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
+| BAGA  	| __i_iter_runSupplyCurve__ | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
+| Community	| __i_multipleSP__	    | Turns on/off whether our model configuration has 1 species per site (monodominant) or multiple species per site (diverse). Values: n (off); y (on). __NOT READY FOR MULTIPLE SPECIES/PFTs in version 2.0.1__.	|
+| Community	| __i_speciesN__	    | Nnumber of species/PFT to run the model.	|
+| Forcing files	| __i_ClimateData__	    | Path to file with climate forcing variables __dataset.csv__	|
+| Forcing files	| __i_GSData__		    | Path to file with growing season data __seasonlimits.2.0.0.csv__	|
 
 ------------
 
@@ -129,6 +145,8 @@ See example data for formatting. Weather drivers should be in hourly timesteps a
 
 ## Outputs:
 
+- Autosave is always enabled regardless of the setting, as this version of the model has no alternative output method. Output files will be generated in the working directory when the run completes.
+
 -Hourly Outputs (see dataheader.csv for full list):
 	-Pressures (predawn soil layer pressures, sun and shade "mid-day" canopy pressures, MPa), 
 	-Water flows (mmol m-2s-1), 
@@ -148,11 +166,8 @@ See example data for formatting. Weather drivers should be in hourly timesteps a
 
 ------------
 
-## Sequential year processing:
-
-When running multiple years of data in a single dataset, the years can be treated as entirely independent (the default) or can work from a continuous water budget.
-
 ### Independent year mode (default)
+
 - Set "Use GS Data" to "n" under "Program Options"
 - Use growing season trimmed data (see the example: "dataset.csv").
 - Ensure that the growing season limits are defined in "seasonlimits.csv"
