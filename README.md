@@ -74,103 +74,83 @@ Upon completion, two output files are produced:
 
 ------------
 
-## Model Parameters:
+## Model Input Files
+
+__Model Parameters:__
 
 Configure plant traits and other parameters in __parameters_2.0.0.csv__ (expected input units are indicated). Coupled with the parameter build function in R to produce the __paramaters_2.0.0.csv__ file.
 
-| Group    	| Parameter       	    | Description          |
-| ------------- | ------------------------- | -------------------- |
-| Site	| __i_sp__		| Species or PFT represented in parameter data	|
-| Site	| __i_region__		| Site/simulation ID. This ID is used for naming the result files that are exported	|
-| Site	| __i_latitude__	| Latitude in degree fraction north.	|
-| Site	| __i_longitude__	| Longitude in degree fraction west.	|
-| Site	| __i_elevation__	| Site elevation in m above sea level.	|
-| Site	| __i_slopeI__		| Slope inclination; degrees from horizontal.	|
-| Site	| __i_slopeA__		| Slope aspect; counterclockwise degrees from south.	|
-| Site	| __i_gWaterP__		|	ground water pressure
-site	i_gWaterDist	distance to ground water source in m from the bottom of the rootsystem
-atmosphere	i_atmTrans	atmospheric transmittance from weather data (set to 0.65 as default if no data available)
-atmosphere	i_solarNoon	solar noon correction from weather data in hours
-atmosphere	i_emiss	long wave emissivity
-atmosphere	i_co2AmbPPM	atmospheric/experiment CO2 ppm, it will update if working with multiple years
-soil	i_layers	number of soil layers (select 1-5)
-soil	i_fieldCapFrac	fraction that field capacity is of saturation (minus residual)
-soil	i_fieldCapPercInit	percent field capacity for starting the season
-soil	i_rockFrac	fraction of soil volume as rocks (0-1)
-soil	i_soilAbsSol	absorptivity of soil surface for solar
-soil	i_rhizoPer	average percent of whole plant resistance in rhizosphere (maximum soil limitation)
-soil	i_texture	USDA soil texture category (equal for all layers but could also be determined per layer)
-stand	i_baperga	basal area per ground area m2 ha-1
-stand	i_leafAreaIndex	canopy lai
-stand	i_soilXHeight	height above soil surface for understory wind and gh in m
-stand	i_height	average tree height in m
-stand	i_treeToPhotoLAI	
-stand	i_leafPerBasal	initial leaf area per basal area per individual tree; m2 m-2
-tree	i_leafWidth	leaf width in m
-tree	i_leafAngleParam	leaf angle parameter; CN 15.4
-tree	i_aspect	max radius of root system per max depth
-tree	i_rootDepth	maximum rooting depth in m
-hydraulics	i_leafPercRes	saturated % of tree resistance in leaves
-hydraulics	i_kmaxTree	kmax of tree in kg hr-1 m-2 MPa-1 per basal area
-hydraulics	i_pinc	Pressure increment for curve generation, (MPa) - higher is faster, but less accurate (setting too high can cause Newton-Rhapson root pressure solving failure)
-hydraulics	i_rootP12	root element p12
-hydraulics	i_rootP50	root element p50
-hydraulics	i_stemP12	stem p12
-hydraulics	i_stemP50	stem p50
-hydraulics	i_leafP12	leaf p12
-hydraulics	i_leafP50	leaf p50
-hydraulics	i_sapwoodT	change in sapwood per change in diameter at breast height
-hydraulics	i_conduitDiam	vessel or tracheid diameter in um
-photosynthesis	i_qMax	quantum yield of electron transport; moles e per mols photons
-photosynthesis	i_vmax25	umol m-2 s-1; maximum carboxylation rate (vmax) at 25C
-photosynthesis	i_jmax25	umol m-2 s-1; maximum electron transport rate (jmax) at 25C
-photosynthesis	i_kc25	m-m constant for CO2 in mole fraction at 25C. Bernacchi T response
-photosynthesis	i_ko25	m-m constant for O2 in mole fraction at 25C. Bernacchi T response
-photosynthesis	i_comp25	photorespiratory compensation point in mole fraction at 25C. Bernacchi T response
-photosynthesis	i_thetaC	shape factor for A-ci colimitation
-photosynthesis	i_havmax	J mol-1; temp-dependency parameters from Leunig 2002
-photosynthesis	i_hdvmax	J mol-1; temp-dependency parameters from Leunig 2002
-photosynthesis	i_svvmax	J mol-1 K-1; temp-dependency parameters from Leunig 2002
-photosynthesis	i_lightCurv	temp-dependency parameters from Leunig 2002
-photosynthesis	i_lightComp	light compensation point in ppfd
-photosynthesis	i_hajmax	J mol-1; temp-dependency parameters from Leunig 2002
-photosynthesis	i_hdjmax	J mol-1; temp-dependency parameters from Leunig 2002
-photosynthesis	i_svjmax	J mol-1 K-1; temp-dependency parameters from Leunig 2002
-BAGA_optimizer	i_iter_gwInc	
-BAGA_optimizer	i_iter_gwStart	
-BAGA_optimizer	i_iter_gwEnd	
-BAGA_optimizer	i_iter_ffcInc	Note: If FFC start < FFC end_ will start curve gen by incrementing FFC before ground water
-BAGA_optimizer	i_iter_ffcStart	
-BAGA_optimizer	i_iter_ffcEnd	
-BAGA_optimizer	i_iter_bagaInc	
-BAGA_optimizer	i_iter_bagaStart	
-BAGA_optimizer	i_iter_bagaEnd	
-BAGA_optimizer	i_iter_bagaRef	
-BAGA_optimizer	i_iter_bagaCutoff	WLT K dropoff threshold (fraction of reference iteration kmin)
+| Group    		| Parameter       	    	| Description										|
+| ---------------------	| ----------------------------- | -------------------------------------------------------------------------------------	|
+| Site			| __i_sp__			| Species or PFT represented in parameter data	|
+| Site			| __i_region__			| Site/simulation ID. This ID is used for naming the result files that are exported	|
+| Site			| __i_latitude__		| Latitude in degree fraction north.	|
+| Site			| __i_longitude__		| Longitude in degree fraction west.	|
+| Site			| __i_elevation__		| Site elevation in m above sea level.	|
+| Site			| __i_slopeI__			| Slope inclination; degrees from horizontal.	|
+| Site			| __i_slopeA__			| Slope aspect; counterclockwise degrees from south.	|
+| Site			| __i_gWaterP__			| Ground water pressure.	|
+| Site			| __i_gWaterDist__		| Distance to ground water source in m from the bottom of the rootsystem.	|
+| Atmosphere		| __i_atmTrans__		| Atmospheric transmittance from weather data (set to 0.65 as default if no data available).	|
+| Atmosphere		| __i_solarNoon__		| Solar noon correction from weather data in hours.	|
+| Atmosphere		| __i_emiss__			| Long wave emissivity.	|
+| Atmosphere		| __i_co2AmbPPM__		| Atmospheric/experiment CO2 ppm, it will update if working with multiple years.	|
+| Soil			| __i_layers__			| Number of soil layers (select 1-5).	|
+| Soil			| __i_fieldCapFrac__		| Fraction that field capacity is of saturation (minus residual).	|
+| Soil			| __i_fieldCapPercInit__	| Percent field capacity for starting the season.	|
+| Soil			| __i_rockFrac__		| Fraction of soil volume as rocks (0-1).	|
+| Soil			| __i_soilAbsSol__		| Absorptivity of soil surface for solar.	|
+| Soil			| __i_rhizoPer__		| Average percent of whole plant resistance in rhizosphere (maximum soil limitation)	|
+| Soil			| __i_texture__			| USDA soil texture category (equal for all layers but could also be determined per layer)	|
+| Stand			| __i_baperga__			| Basal area per ground area m2 ha-1	|
+| Stand			| __i_leafAreaIndex__		| Canopy lai (m2 m-2)	|
+| Stand			| __i_soilXHeight__		| Height above soil surface for understory wind and gh in m	|
+| Stand			| __i_height__			| Average tree height in m	|
+| Stand			| __i_treeToPhotoLAI__		|	|	
+| Stand			| __i_leafPerBasal__		| Initial leaf area per basal area per individual tree; m2 m-2	|
+| Tree			| __i_leafWidth__		| Leaf width in m	|
+| Tree			| __i_leafAngleParam__		| Leaf angle parameter; CN 15.4	|
+| Tree			| __i_aspect__			| Max radius of root system per max depth	|
+| Tree			| __i_rootDepth__		| Maximum rooting depth in m	|
+| Hydraulics		| __i_leafPercRes__		| Saturated % of tree resistance in leaves	|
+| Hydraulics		| __i_kmaxTree__		| Kmax of tree in kg hr-1 m-2 MPa-1 per basal area	|
+| Hydraulics		| __i_pinc__			| Pressure increment for curve generation, (MPa) - higher is faster, but less accurate (setting too high can cause Newton-Rhapson root pressure solving failure)	|
+| Hydraulics		| __i_rootP12__			| Root element p12	|
+| Hydraulics		| __i_rootP50__			| Root element p50	|
+| Hydraulics		| __i_stemP12__			| Stem p12	|
+| Hydraulics		| __i_stemP50__			| Stem p50	|
+| Hydraulics		| __i_leafP12__			| Leaf p12	|
+| Hydraulics		| __i_leafP50__			| Leaf p50	|
+| Hydraulics		| __i_sapwoodT__		| Change in sapwood per change in diameter at breast height	|
+| Hydraulics		| __i_conduitDiam__		| Vessel or tracheid diameter in um	|
+| Photosynthesis	| __i_qMax__			| Quantum yield of electron transport; moles e per mols photons	|
+| Photosynthesis	| __i_vmax25__			| Maximum carboxylation rate (vmax) at 25C (umol m-2 s-1)	|
+| Photosynthesis	| __i_jmax25__	 		| Maximum electron transport rate (jmax) at 25C (umol m-2 s-1), can be assumed to be Vmax25 * 1.67	|
+| Photosynthesis	| __i_kc25__			| Michaelis-Menten constant for CO2 in mole fraction at 25C. Bernacchi T response	|
+| Photosynthesis	| __i_ko25__			| Michaelis-Menten constant for O2 in mole fraction at 25C. Bernacchi T response	|
+| Photosynthesis	| __i_comp25__			| Photorespiratory compensation point in mole fraction at 25C. Bernacchi T response	|
+| Photosynthesis	| __i_thetaC__			| Shape factor for A-ci colimitation	|
+| Photosynthesis	| __i_havmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1)	|
+| Photosynthesis	| __i_hdvmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1)	|
+| Photosynthesis	| __i_svvmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1)	|
+| Photosynthesis	| __i_lightCurv__		| Temp-dependency parameters from Leunig 2002	|
+| Photosynthesis	| __i_lightComp__		| Light compensation point in ppfd	|
+| Photosynthesis	| __i_hajmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1)	|
+| Photosynthesis	| __i_hdjmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1)	|
+| Photosynthesis	| __i_svjmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1 K-1)	|
+| BAGA_optimizer	| __i_iter_gwInc__		|	|
+| BAGA_optimizer	| __i_iter_gwStart__		|	|
+| BAGA_optimizer	| __i_iter_gwEnd__		|	|
+| BAGA_optimizer	| __i_iter_ffcInc__		| Note: If FFC start < FFC end_ will start curve gen by incrementing FFC before ground water	|
+| BAGA_optimizer	| __i_iter_ffcStart__		|	|
+| BAGA_optimizer	| __i_iter_ffcEnd__		|	|
+| BAGA_optimizer	| __i_iter_bagaInc__		|	|
+| BAGA_optimizer	| __i_iter_bagaStart__		|	|
+| BAGA_optimizer	| __i_iter_bagaEnd__		|	|
+| BAGA_optimizer	| __i_iter_bagaRef__		|	|
+| BAGA_optimizer	| __i_iter_bagaCutoff__		| WLT K dropoff threshold (fraction of reference iteration kmin)	|
 
-__Noteworthy plant traits:__
-
-- Whole plant kMax (saturated whole-plant conductance).
-- Percent of resistance in leaves (determines how tree conductance is partitioned to woody vs. leaf elements).
-- Vulnerability curves (in the form of P12 and P50).
-- Basal area/ground area (BA:GA, tree density or BAI).
-- Leaf area/basal area (together LA:BA and BA:GA determine LAI).
-- Leaf width.
-- Root depth in m.
-- Maximum carboxylation rate at 25C, Vcmax25 (and associated maximum electron transport rate Jmax25, assumed to be Vmax25 * 1.67).
-
-__Important environment or site traits:__
-
-- Ambient [CO2] Ca (input as ppm).
-- Soil hydraulic parameters.
-- Elevation.
-- Lat/lon.
-- Solar noon correction (offset between hour 12 in weather data and actual solar noon at this location)
-- Atmospheric "clear sky" transmittance (tau). Calibrates the amount of observed solar radiation considered to be "clear sky" (no clouds), generally between 0.6-0.75. See the equations in the "solarcalc" function if you would like to back-calculate transmittance from a observed clear sky data point.
-- The soil parameters we used for many soil types can be found in the __Common Soil Types__ sheet of __parameters - inputs worksheet.xlsx__. __Note:__ Currently only supports using the same soil type for all active layers.
-- Soil layers count (Default: 5) can be up to 5. A higher number of soil layers provides a more robust soil water budget simulation, while fewer soil layers may improve performance slightly.
-
-__Model Configuration:__
+__Model Configuratiosn:__
 
 | Group    	| Model Control       	    | Description          |
 | ------------- | ------------------------- | -------------------- |
