@@ -74,9 +74,79 @@ Upon completion, two output files are produced:
 
 ------------
 
-## Plant and Stand Parameters:
+## Model Parameters:
 
-Configure plant traits and other parameters in __parameters.csv__ (expected input units are indicated). There is also an Excel .xslx version of this file included which highlights the inputs used in yellow and includes additional comments. The "parameters" sheet from this workbook can be exported as __parameters.csv__ after editing, or the __parameters.csv__ file can be edited directly. Ideally we will use the parameter build function in R to produce the __paramaters.csv__ file.
+Configure plant traits and other parameters in __parameters_2.0.0.csv__ (expected input units are indicated). Coupled with the parameter build function in R to produce the __paramaters_2.0.0.csv__ file.
+
+| Group    	| Parameter       	    | Description          |
+| ------------- | ------------------------- | -------------------- |
+| Site	| __i_sp__		| Species or PFT represented in parameter data	|
+| Site	| __i_region__		| Site/simulation ID. This ID is used for naming the result files that are exported	|
+| Site	| __i_latitude__	| Latitude in degree fraction north.	|
+| Site	| __i_longitude__	| Longitude in degree fraction west.	|
+| Site	| __i_elevation__	| Site elevation in m above sea level.	|
+| Site	| __i_slopeI__		| Slope inclination; degrees from horizontal.	|
+| Site	| __i_slopeA__		| Slope aspect; counterclockwise degrees from south.	|
+| Site	| __i_gWaterP__		|	ground water pressure
+site	i_gWaterDist	distance to ground water source in m from the bottom of the rootsystem
+atmosphere	i_atmTrans	atmospheric transmittance from weather data (set to 0.65 as default if no data available)
+atmosphere	i_solarNoon	solar noon correction from weather data in hours
+atmosphere	i_emiss	long wave emissivity
+atmosphere	i_co2AmbPPM	atmospheric/experiment CO2 ppm, it will update if working with multiple years
+soil	i_layers	number of soil layers (select 1-5)
+soil	i_fieldCapFrac	fraction that field capacity is of saturation (minus residual)
+soil	i_fieldCapPercInit	percent field capacity for starting the season
+soil	i_rockFrac	fraction of soil volume as rocks (0-1)
+soil	i_soilAbsSol	absorptivity of soil surface for solar
+soil	i_rhizoPer	average percent of whole plant resistance in rhizosphere (maximum soil limitation)
+soil	i_texture	USDA soil texture category (equal for all layers but could also be determined per layer)
+stand	i_baperga	basal area per ground area m2 ha-1
+stand	i_leafAreaIndex	canopy lai
+stand	i_soilXHeight	height above soil surface for understory wind and gh in m
+stand	i_height	average tree height in m
+stand	i_treeToPhotoLAI	
+stand	i_leafPerBasal	initial leaf area per basal area per individual tree; m2 m-2
+tree	i_leafWidth	leaf width in m
+tree	i_leafAngleParam	leaf angle parameter; CN 15.4
+tree	i_aspect	max radius of root system per max depth
+tree	i_rootDepth	maximum rooting depth in m
+hydraulics	i_leafPercRes	saturated % of tree resistance in leaves
+hydraulics	i_kmaxTree	kmax of tree in kg hr-1 m-2 MPa-1 per basal area
+hydraulics	i_pinc	Pressure increment for curve generation, (MPa) - higher is faster, but less accurate (setting too high can cause Newton-Rhapson root pressure solving failure)
+hydraulics	i_rootP12	root element p12
+hydraulics	i_rootP50	root element p50
+hydraulics	i_stemP12	stem p12
+hydraulics	i_stemP50	stem p50
+hydraulics	i_leafP12	leaf p12
+hydraulics	i_leafP50	leaf p50
+hydraulics	i_sapwoodT	change in sapwood per change in diameter at breast height
+hydraulics	i_conduitDiam	vessel or tracheid diameter in um
+photosynthesis	i_qMax	quantum yield of electron transport; moles e per mols photons
+photosynthesis	i_vmax25	umol m-2 s-1; maximum carboxylation rate (vmax) at 25C
+photosynthesis	i_jmax25	umol m-2 s-1; maximum electron transport rate (jmax) at 25C
+photosynthesis	i_kc25	m-m constant for CO2 in mole fraction at 25C. Bernacchi T response
+photosynthesis	i_ko25	m-m constant for O2 in mole fraction at 25C. Bernacchi T response
+photosynthesis	i_comp25	photorespiratory compensation point in mole fraction at 25C. Bernacchi T response
+photosynthesis	i_thetaC	shape factor for A-ci colimitation
+photosynthesis	i_havmax	J mol-1; temp-dependency parameters from Leunig 2002
+photosynthesis	i_hdvmax	J mol-1; temp-dependency parameters from Leunig 2002
+photosynthesis	i_svvmax	J mol-1 K-1; temp-dependency parameters from Leunig 2002
+photosynthesis	i_lightCurv	temp-dependency parameters from Leunig 2002
+photosynthesis	i_lightComp	light compensation point in ppfd
+photosynthesis	i_hajmax	J mol-1; temp-dependency parameters from Leunig 2002
+photosynthesis	i_hdjmax	J mol-1; temp-dependency parameters from Leunig 2002
+photosynthesis	i_svjmax	J mol-1 K-1; temp-dependency parameters from Leunig 2002
+BAGA_optimizer	i_iter_gwInc	
+BAGA_optimizer	i_iter_gwStart	
+BAGA_optimizer	i_iter_gwEnd	
+BAGA_optimizer	i_iter_ffcInc	Note: If FFC start < FFC end_ will start curve gen by incrementing FFC before ground water
+BAGA_optimizer	i_iter_ffcStart	
+BAGA_optimizer	i_iter_ffcEnd	
+BAGA_optimizer	i_iter_bagaInc	
+BAGA_optimizer	i_iter_bagaStart	
+BAGA_optimizer	i_iter_bagaEnd	
+BAGA_optimizer	i_iter_bagaRef	
+BAGA_optimizer	i_iter_bagaCutoff	WLT K dropoff threshold (fraction of reference iteration kmin)
 
 __Noteworthy plant traits:__
 
@@ -114,12 +184,12 @@ __Model Configuration:__
 | Hydraulics  	| __i_predawnsMode__ 	    | Turns on/off if model should consider measured pre-dawn water potential values. Values: n (off); y (on). If set to 'y', disables soil simulation and runs from hourly inputs of canopy predawn water potential. These are read from the "rain" column (rain is not used with the soil sim disabled) in MPa. See "dataset - predawns example.csv". This mode is especially useful when comparing to other models which run from canopy predawn measurements, and generally runs significantly faster as it does not need to solve for root layer pressures.	|
 | Hydraulics  	| __i_cavitFatigue__ 	    | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
 | Hydraulics  	| __i_stemOnly__ 	    | Turns on/off xylem stress hysteresis only in stem xylem. Values: n (off); y (on). When disabled it allows for a weighted estimation of xylem vulnerability to embolism for both stem and roots	|
-| BAGA  	| __i_iter_gwEnable__ 	    | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
-| BAGA  	| __i_iter_ffcEnable__ 	    | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
-| BAGA  	| __i_iter_bagaEnable__     | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
-| BAGA  	| __i_iter_useAreaTable__   | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
-| BAGA  	| __i_iter_yearsAsCount__   | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
-| BAGA  	| __i_iter_runSupplyCurve__ | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
+| BAGA  	| __i_iter_gwEnable__ 	    | __Not tested in version 2.0.1__.	|
+| BAGA  	| __i_iter_ffcEnable__ 	    | __Not tested in version 2.0.1__.	|
+| BAGA  	| __i_iter_bagaEnable__     | Increate the BA:GA to find the basal area that puts the stand in ecohydrological equilibrium with the weather conditions. Values: n (off); y (on). __Not tested in version 2.0.1__.	|
+| BAGA  	| __i_iter_useAreaTable__   | if y will pull GA:BA_ LA:BA_ LAI from AreaData table per year and per site. Values: n (off); y (on). __Not tested in version 2.0.1__.	|
+| BAGA  	| __i_iter_yearsAsCount__   | The "year" values represent different data set ID's_ not actual years. In this mode the "start" year is always 0. Values: n (off); y (on). __Not tested in version 2.0.1__.	|
+| BAGA  	| __i_iter_runSupplyCurve__ | Turns on/off all iteration settings. Values: n (off); y (on). __Not tested in version 2.0.1__. 	|
 | Community	| __i_multipleSP__	    | Turns on/off whether our model configuration has 1 species per site (monodominant) or multiple species per site (diverse). Values: n (off); y (on). __NOT READY FOR MULTIPLE SPECIES/PFTs in version 2.0.1__.	|
 | Community	| __i_speciesN__	    | Nnumber of species/PFT to run the model.	|
 | Forcing files	| __i_ClimateData__	    | Path to file with climate forcing variables __dataset.csv__	|
