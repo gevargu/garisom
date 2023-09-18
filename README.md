@@ -1,16 +1,16 @@
-# Gain-Risk Stomatal Optimization Model
+# Carbon Gain vs Hydraulic Risk Stomatal Optimization Model V 2.0
 
 __Coding language:__ C++
 
-__Readme author:__ Henry Todd (henry.todd@utah.edu)
+__Authors:__ German Vargas G. & William R.L. Anderegg
 
-__Readme editor:__ German Vargas G. (german.vargas@utah.edu)
+__Contact:__ german.vargas@utah.edu
 
 ------------
 
 ## Introduction:
 
-The model uses a stomatal gain vs. risk optimization (Sperry et al. 2017 -- see references below) combined with a soil water budget to run a continuous growing season simulation, producing stand outputs such as net carbon assimilation (Anet), internal [CO2] (Ci), transpiration (E), total evapotranspiration (ET), and element conductances (k) on an hourly and summary basis (see output details below).
+The model uses a stomatal carbon gain vs. hydraulic risk optimization (Sperry et al. 2017 -- see references below) combined with a soil water budget to run a continuous growing season simulation, producing stand outputs such as net carbon assimilation (Anet), internal [CO2] (Ci), transpiration (E), total evapotranspiration (ET), and element conductances (k) on an hourly and summary basis (see output details below).
 
 ------------
 
@@ -50,11 +50,6 @@ __b.3)__ Run the following command will compile the code and build an executable
 make
 ```
 
-This uses the standard GNU C++ compiler to create the executable file __modelprog.exe__
-- O3 and ffast_math are optimization options.
-- std sets the version of the C++ standard used.
-- o species the output file.
-
 __b.4)__ Run this program from the same folder with this command:
 
 ```
@@ -65,12 +60,12 @@ __b.5)__ Press <kbd>Command</kbd> + <kbd>C</kbd> if you want to stop the model b
 
 This version has also been tested with Visual Studio 2017's compiler with similar optimizations (floating point mode fast, maximum optimization preferring speed). The following files (included in this repository) should be located in the working directory (normally the same directory as the executable) before running:
 	
-  - __parameters.csv__ (plant, site params and program options).
-  - __nametable.csv__ (maps parameter names to row/col locations in the parameters.csv sheet).
+  - __parameters_2.0.0.csv__ (site, atmospheric, soils, stand, plant, hydraulics, and carbon assimilation parameters).
+  - __configuration_2.0.0.csv__ (model controls)
   - __dataset.csv__ (hourly weather drivers).
   - __dataheader.csv__ (a header row for the hourly data output).
   - __sumheader.csv__ (a header row for the summary data output).
-  - __seasonlimits.csv__ (growing season limits, only required if using "sequential year mode" described below)
+  - __seasonlimits_2.0.0.csv__ (growing season limits and yearly atmospheric CO2, only required if using "sequential year mode" described below)
 
 Upon completion, two output files are produced:
 	
@@ -79,40 +74,106 @@ Upon completion, two output files are produced:
 
 ------------
 
-## Plant and Stand Parameters:
+## Model Input Files
 
-Configure plant traits and other parameters in __parameters.csv__ (expected input units are indicated). There is also an Excel .xslx version of this file included which highlights the inputs used in yellow and includes additional comments. The "parameters" sheet from this workbook can be exported as __parameters.csv__ after editing, or the __parameters.csv__ file can be edited directly. Ideally we will use the parameter build function in R to produce the __paramaters.csv__ file.
+__Model Parameters:__
 
-__Noteworthy plant traits:__
+Configure plant traits and other parameters in __parameters_2.0.0.csv__ (expected input units are indicated). Coupled with the parameter build function in R to produce the __paramaters_2.0.0.csv__ file.
 
-- Whole plant kMax (saturated whole-plant conductance).
-- Percent of resistance in leaves (determines how tree conductance is partitioned to woody vs. leaf elements).
-- Vulnerability curves (in the form of Weibull curve B and C parameters).
-- Basal area/ground area (BA:GA, tree density or BAI).
-- Leaf area/basal area (together LA:BA and BA:GA determine LAI).
-- Leaf width.
-- Root Beta (controls rooting depth).
-- Maximum carboxylation rate at 25C, Vcmax25 (and associated maximum electron transport rate Jmax25, assumed to be Vmax25 * 1.67).
+| Group    		| Parameter       	    	| Description										|
+| ---------------------	| ----------------------------- | -------------------------------------------------------------------------------------	|
+| Site			| __i_sp__			| Species or PFT represented in parameter data	|
+| Site			| __i_region__			| Site/simulation ID. This ID is used for naming the result files that are exported	|
+| Site			| __i_latitude__		| Latitude in degree fraction north.	|
+| Site			| __i_longitude__		| Longitude in degree fraction west.	|
+| Site			| __i_elevation__		| Site elevation in m above sea level.	|
+| Site			| __i_slopeI__			| Slope inclination; degrees from horizontal.	|
+| Site			| __i_slopeA__			| Slope aspect; counterclockwise degrees from south.	|
+| Site			| __i_gWaterP__			| Ground water pressure.	|
+| Site			| __i_gWaterDist__		| Distance to ground water source in m from the bottom of the rootsystem.	|
+| Atmosphere		| __i_atmTrans__		| Atmospheric transmittance from weather data (set to 0.65 as default if no data available).	|
+| Atmosphere		| __i_solarNoon__		| Solar noon correction from weather data in hours.	|
+| Atmosphere		| __i_emiss__			| Long wave emissivity.	|
+| Atmosphere		| __i_co2AmbPPM__		| Atmospheric/experiment CO2 ppm, it will update if working with multiple years.	|
+| Soil			| __i_layers__			| Number of soil layers (select 1-5).	|
+| Soil			| __i_fieldCapFrac__		| Fraction that field capacity is of saturation (minus residual).	|
+| Soil			| __i_fieldCapPercInit__	| Percent field capacity for starting the season.	|
+| Soil			| __i_rockFrac__		| Fraction of soil volume as rocks (0-1).	|
+| Soil			| __i_soilAbsSol__		| Absorptivity of soil surface for solar.	|
+| Soil			| __i_rhizoPer__		| Average percent of whole plant resistance in rhizosphere (maximum soil limitation)	|
+| Soil			| __i_texture__			| USDA soil texture category (equal for all layers but could also be determined per layer)	|
+| Stand			| __i_baperga__			| Basal area per ground area m2 ha-1	|
+| Stand			| __i_leafAreaIndex__		| Canopy lai (m2 m-2)	|
+| Stand			| __i_soilXHeight__		| Height above soil surface for understory wind and gh in m	|
+| Stand			| __i_height__			| Average tree height in m	|
+| Stand			| __i_treeToPhotoLAI__		|	|	
+| Stand			| __i_leafPerBasal__		| Initial leaf area per basal area per individual tree; m2 m-2	|
+| Tree			| __i_leafWidth__		| Leaf width in m	|
+| Tree			| __i_leafAngleParam__		| Leaf angle parameter; CN 15.4	|
+| Tree			| __i_aspect__			| Max radius of root system per max depth	|
+| Tree			| __i_rootDepth__		| Maximum rooting depth in m	|
+| Hydraulics		| __i_leafPercRes__		| Saturated % of tree resistance in leaves	|
+| Hydraulics		| __i_kmaxTree__		| Kmax of tree in kg hr-1 m-2 MPa-1 per basal area	|
+| Hydraulics		| __i_pinc__			| Pressure increment for curve generation, (MPa) - higher is faster, but less accurate (setting too high can cause Newton-Rhapson root pressure solving failure)	|
+| Hydraulics		| __i_rootP12__			| Root element p12	|
+| Hydraulics		| __i_rootP50__			| Root element p50	|
+| Hydraulics		| __i_stemP12__			| Stem p12	|
+| Hydraulics		| __i_stemP50__			| Stem p50	|
+| Hydraulics		| __i_leafP12__			| Leaf p12	|
+| Hydraulics		| __i_leafP50__			| Leaf p50	|
+| Hydraulics		| __i_sapwoodT__		| Change in sapwood per change in diameter at breast height	|
+| Hydraulics		| __i_conduitDiam__		| Vessel or tracheid diameter in um	|
+| Photosynthesis	| __i_qMax__			| Quantum yield of electron transport; moles e per mols photons	|
+| Photosynthesis	| __i_vmax25__			| Maximum carboxylation rate (vmax) at 25C (umol m-2 s-1)	|
+| Photosynthesis	| __i_jmax25__	 		| Maximum electron transport rate (jmax) at 25C (umol m-2 s-1), can be assumed to be Vmax25 * 1.67	|
+| Photosynthesis	| __i_kc25__			| Michaelis-Menten constant for CO2 in mole fraction at 25C. Bernacchi T response	|
+| Photosynthesis	| __i_ko25__			| Michaelis-Menten constant for O2 in mole fraction at 25C. Bernacchi T response	|
+| Photosynthesis	| __i_comp25__			| Photorespiratory compensation point in mole fraction at 25C. Bernacchi T response	|
+| Photosynthesis	| __i_thetaC__			| Shape factor for A-ci colimitation	|
+| Photosynthesis	| __i_havmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1)	|
+| Photosynthesis	| __i_hdvmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1)	|
+| Photosynthesis	| __i_svvmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1)	|
+| Photosynthesis	| __i_lightCurv__		| Temp-dependency parameters from Leunig 2002	|
+| Photosynthesis	| __i_lightComp__		| Light compensation point in ppfd	|
+| Photosynthesis	| __i_hajmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1)	|
+| Photosynthesis	| __i_hdjmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1)	|
+| Photosynthesis	| __i_svjmax__			| Temp-dependency parameters from Leunig 2002 (J mol-1 K-1)	|
+| BAGA_optimizer	| __i_iter_gwInc__		|	|
+| BAGA_optimizer	| __i_iter_gwStart__		|	|
+| BAGA_optimizer	| __i_iter_gwEnd__		|	|
+| BAGA_optimizer	| __i_iter_ffcInc__		| Note: If FFC start < FFC end_ will start curve gen by incrementing FFC before ground water	|
+| BAGA_optimizer	| __i_iter_ffcStart__		|	|
+| BAGA_optimizer	| __i_iter_ffcEnd__		|	|
+| BAGA_optimizer	| __i_iter_bagaInc__		|	|
+| BAGA_optimizer	| __i_iter_bagaStart__		|	|
+| BAGA_optimizer	| __i_iter_bagaEnd__		|	|
+| BAGA_optimizer	| __i_iter_bagaRef__		|	|
+| BAGA_optimizer	| __i_iter_bagaCutoff__		| WLT K dropoff threshold (fraction of reference iteration kmin)	|
 
-__Important environment or site traits:__
+__Model Configuratiosn:__
 
-- Ambient [CO2] Ca (input as ppm).
-- Soil hydraulic parameters.
-- Elevation.
-- Lat/lon.
-- Solar noon correction (offset between hour 12 in weather data and actual solar noon at this location)
-- Atmospheric "clear sky" transmittance (tau). Calibrates the amount of observed solar radiation considered to be "clear sky" (no clouds), generally between 0.6-0.75. See the equations in the "solarcalc" function if you would like to back-calculate transmittance from a observed clear sky data point.
-- __parameters - inputs worksheet.xlsx__ includes a "root and xylem worksheet" which can be used to calculate Weibull B and C values for the vulnerability curve from P50 and P98 values. If VC measurements are unavailable for certain elements of the plant other element curves can be substituted. This sheet also includes calculations for converting root "beta" values to total rooting depth in cm.
-- The soil parameters we used for many soil types can be found in the __Common Soil Types__ sheet of __parameters - inputs worksheet.xlsx__. __Note:__ Currently only supports using the same soil type for all active layers.
-- Soil layers count (Default: 5) can be up to 5. A higher number of soil layers provides a more robust soil water budget simulation, while fewer soil layers may improve performance slightly.
-- Enabling ground water (Default: n) provides an unlimited source of water at a set potential and distance below the root layers. This water will flow up into the soil layers, and potentially allow layers to fill above field capacity (from the bottom layer up). When disabled (default), the only sources of water input will be the initial fraction of field capacity and observed rainfall (and any water over field capacity will become "drainage").
-- Rain (Default: y) weather data rainfall will be ignored if disabled.
-- Refilling (Default: n) allows trees to restore lost conductance, however the refilling model is not sufficient to simulate authentic xylem refilling behavior and has not been thoroughly tested in the current version of the code.
-- Soil redistribution (Default: y) allows water to flow between soil layers
-- Soil evaporation (Default: y) enables simulation of water evaporation from the surface soil layer.
-- Use GS Data (Default: n) If enabled, multiple years will be run "sequentially" with on and off seasons defined in seasonlimits.csv. See "Sequential year mode" for details. When disabled (default), all weather timesteps provided are treated as part of the growing season and the user is expected to truncate individual years to their start/end days. Water budget is reset between years when disabled, treating years as totally independent.
-- Autosave is always enabled regardless of the setting, as this version of the model has no alternative output method. Output files will be generated in the working directory when the run completes.
-- Predawns Mode (Default: n): If set to 'y', disables soil simulation and runs from hourly inputs of canopy predawn water potential. These are read from the "rain" column (rain is not used with the soil sim disabled) in MPa. See "dataset - predawns example.csv". This mode is especially useful when comparing to other models which run from canopy predawn measurements, and generally runs significantly faster as it does not need to solve for root layer pressures.
+| Group    	| Model Control       	    | Description          |
+| ------------- | ------------------------- | -------------------- |
+| Soil     	| __igWaterEnable__   	    | Turns on/off groundwater flow. Values: n (off); y (on). It provides an unlimited source of water at a set potential and distance below the root layers. This water will flow up into the soil layers, and potentially allow layers to fill above field capacity (from the bottom layer up). When disabled (default), the only sources of water input will be the initial fraction of field capacity and observed rainfall (and any water over field capacity will become "drainage").	|
+| Soil     	| __i_soilRedEnable__  	    | Turns on/off soil redistribution routine. Values: n (off); y (on). It allows water to flow between soil layers.	|
+| Soil     	| __i_soilEvapEnable__ 	    | Turns on/off soil evaporation routine. Values: n (off); y (on). It enables simulation of water evaporation from the surface soil layer.	|
+| Climate  	| __i_rainEnable__  	    | Turns on/off rain inputs. Values: n (off); y (on). It allows for precipitation events. Weather data rainfall will be ignored if disabled.	|
+| Climate  	| __i_useGSDataStress__     | Turns on/off growing season data for multiple year modeling. Vakyes: n (off); y (on). If enabled, multiple years will be run "sequentially" with on and off seasons defined in seasonlimits_2.0.0.csv and a continuous water budget. When disabled (default), all weather timesteps provided are treated as part of the growing season and the user is expected to truncate individual years to their start/end days. Water budget is reset between years when disabled, treating years as totally independent.	|
+| Climate	| __i_useGSDataOpt__ 	    | Turns on/off growing season data for multiple year modeling during BAGA optimization. Values: n (off); y (on).	|
+| Hydraulics  	| __i_refilling__ 	    | Turns on/off xylem refilling within a growing season. Values: n (off); y (on). It allows trees to restore lost conductance, however the refilling model is not sufficient to simulate authentic xylem refilling behavior and has __not been thoroughly tested in the current version of the code__.	|
+| Hydraulics  	| __i_predawnsMode__ 	    | Turns on/off if model should consider measured pre-dawn water potential values. Values: n (off); y (on). If set to 'y', disables soil simulation and runs from hourly inputs of canopy predawn water potential. These are read from the "rain" column (rain is not used with the soil sim disabled) in MPa. See "dataset - predawns example.csv". This mode is especially useful when comparing to other models which run from canopy predawn measurements, and generally runs significantly faster as it does not need to solve for root layer pressures.	|
+| Hydraulics  	| __i_cavitFatigue__ 	    | Turns on/off xylem stress hysteresis to carry effects from previous growing season. Values: n (off); y (on). It allows for a weighted estimation of xylem vulnerability to embolism	|
+| Hydraulics  	| __i_stemOnly__ 	    | Turns on/off xylem stress hysteresis only in stem xylem. Values: n (off); y (on). When disabled it allows for a weighted estimation of xylem vulnerability to embolism for both stem and roots	|
+| BAGA  	| __i_iter_gwEnable__ 	    | __Not tested in version 2.0.1__.	|
+| BAGA  	| __i_iter_ffcEnable__ 	    | __Not tested in version 2.0.1__.	|
+| BAGA  	| __i_iter_bagaEnable__     | Increate the BA:GA to find the basal area that puts the stand in ecohydrological equilibrium with the weather conditions. Values: n (off); y (on). __Not tested in version 2.0.1__.	|
+| BAGA  	| __i_iter_useAreaTable__   | if y will pull GA:BA_ LA:BA_ LAI from AreaData table per year and per site. Values: n (off); y (on). __Not tested in version 2.0.1__.	|
+| BAGA  	| __i_iter_yearsAsCount__   | The "year" values represent different data set ID's_ not actual years. In this mode the "start" year is always 0. Values: n (off); y (on). __Not tested in version 2.0.1__.	|
+| BAGA  	| __i_iter_runSupplyCurve__ | Turns on/off all iteration settings. Values: n (off); y (on). __Not tested in version 2.0.1__. 	|
+| Community	| __i_multipleSP__	    | Turns on/off whether our model configuration has 1 species per site (monodominant) or multiple species per site (diverse). Values: n (off); y (on). __NOT READY FOR MULTIPLE SPECIES/PFTs in version 2.0.1__.	|
+| Community	| __i_speciesN__	    | Nnumber of species/PFT to run the model.	|
+| Forcing files	| __i_ClimateData__	    | Path to file with climate forcing variables __dataset.csv__	|
+| Forcing files	| __i_GSData__		    | Path to file with growing season data __seasonlimits.2.0.0.csv__	|
 
 ------------
 
@@ -134,6 +195,8 @@ See example data for formatting. Weather drivers should be in hourly timesteps a
 
 ## Outputs:
 
+- Autosave is always enabled regardless of the setting, as this version of the model has no alternative output method. Output files will be generated in the working directory when the run completes.
+
 -Hourly Outputs (see dataheader.csv for full list):
 	-Pressures (predawn soil layer pressures, sun and shade "mid-day" canopy pressures, MPa), 
 	-Water flows (mmol m-2s-1), 
@@ -153,11 +216,8 @@ See example data for formatting. Weather drivers should be in hourly timesteps a
 
 ------------
 
-## Sequential year processing:
-
-When running multiple years of data in a single dataset, the years can be treated as entirely independent (the default) or can work from a continuous water budget.
-
 ### Independent year mode (default)
+
 - Set "Use GS Data" to "n" under "Program Options"
 - Use growing season trimmed data (see the example: "dataset.csv").
 - Ensure that the growing season limits are defined in "seasonlimits.csv"
@@ -177,24 +237,13 @@ In this mode, plant hydraulics will reset between seasons and plant transpiratio
 
 ## References:
 
+Describing the version 1.0 of the C++ code:
+- Venturas MD, JS Sperry, DM Love, EH Frehner, MG Allred, Y Wang, and WRL Anderegg. (2017). A Stomatal Control Model Based on Optimization of Carbon Gain versus Hydraulic Risk Predicts Aspen Sapling Responses to Drought. New Phytologist 220: 836–50.
+
 Describing the gain/risk algorithm used in the model:
-- Sperry JS, Venturas MD, Anderegg WRL, Mencucinni M, Mackay DS, Wang Y, Love DM (2017) Predicting stomatal responses to the environment from the optimization of photosynthetic gain and hydraulic cost. Plant Cell and Environment 40: 816-830
+- Sperry JS, MD Venturas, WRL Anderegg, M Mencucinni, DS Mackay, Y Wang, and DM Love. (2017). Predicting stomatal responses to the environment from the optimization of photosynthetic gain and hydraulic cost. Plant Cell and Environment 40: 816-830
 
 Describing the original hydraulic model the gain-risk optimization was based on:
-- Sperry JS, Love DM (2015) Tansley Review: What plant hydraulics can tell us about plant responses to climate-change droughts. New Phytologist 207: 14-17.
-- Sperry JS, Wang Y, Wolfe BT, Mackay DS, Anderegg WRL, McDowell NG, Pockman WT (2016) Pragmatic hydraulic theory predicts stomatal responses to climatic water deficits. New Phytologist 212: 577-589
-
-(Full-text PDFs available at http://sperry.biology.utah.edu/publications/)
-
+- Sperry JS, and DM Love (2015) Tansley Review: What plant hydraulics can tell us about plant responses to climate-change droughts. New Phytologist 207: 14-17.
+- Sperry JS, Y Wang, BT Wolfe, DS Mackay, WRL Anderegg, NG McDowell, and WT Pockman. (2016). Pragmatic hydraulic theory predicts stomatal responses to climatic water deficits. New Phytologist 212: 577-589
 -------------
-
-## Contact:
-
-For specific questions about this C++ version of the model, contact:
-- Henry Todd:
-  - henry.todd@utah.edu
-  - hnt1137@gmail.com
-
-- German Vargas G.:
-  - german.vargas@utah.edu
-  - gevargu@gmail.com
