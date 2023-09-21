@@ -76,8 +76,8 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
     
     ## Configuration file: configuration_2.0.0.csv ----------------
     config.file <- matrix(nrow = 3,ncol = 21)
-    config.file[1,] <- c("soil","soil","soil","climate","climate","climate","hydraulics","hydraulics","hydraulics","hydraulics","baga","baga","baga","baga","baga","baga","community","community","forcing_files","forcing_files","NULL")
-    config.file[2,] <- c("i_gWaterEnable","i_soilRedEnable","i_soilEvapEnable","i_rainEnable","i_useGSDataStress","i_useGSDataOpt","i_refilling","i_predawnsMode","i_cavitFatigue","i_stemOnly","i_iter_gwEnable","i_iter_ffcEnable","i_iter_bagaEnable","i_iter_useAreaTable","i_iter_yearsAsCount","i_iter_runSupplyCurve","i_multipleSP","i_speciesN","i_ClimateData","i_GSData","NULL")
+    config.file[1,] <- c("soil","soil","soil","climate","climate","climate","hydraulics","hydraulics","hydraulics","hydraulics","baga","baga","baga","baga","baga","baga","community","community","forcing_files","forcing_files","forcing_files","forcing_files","NULL")
+    config.file[2,] <- c("i_gWaterEnable","i_soilRedEnable","i_soilEvapEnable","i_rainEnable","i_useGSDataStress","i_useGSDataOpt","i_refilling","i_predawnsMode","i_cavitFatigue","i_stemOnly","i_iter_gwEnable","i_iter_ffcEnable","i_iter_bagaEnable","i_iter_useAreaTable","i_iter_yearsAsCount","i_iter_runSupplyCurve","i_multipleSP","i_speciesN","i_ClimateData","i_GSData","i_dataheader","i_sumheader","NULL")
     config.file[c(1,2,3),21] <- "NULL"# last column should say NULL, this will avoid problems in Cpp
     model_controls <- config.file[2,]
     N <- length(model_controls)-1
@@ -85,7 +85,7 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
     for (c in 1:N) {
       pos.config <- as.vector(which(x = config.file==model_controls[c],arr.ind = TRUE))
       pos.config[1] <- pos.config[1]+1# get the right row
-      if(model_controls[c] %in% c("i_ClimateData","i_GSData")){
+      if(model_controls[c] %in% c("i_ClimateData","i_GSData","i_dataheader","i_sumheader")){
         config.file[pos.config[1],pos.config[2]] <- parameter_data[parameter_data$i_site == i_site[s],model_controls[c]]
       } else {
         if(isTRUE(get(model_controls[c]))){
