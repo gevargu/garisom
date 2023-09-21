@@ -1,23 +1,26 @@
-09/15/2023 - "2.0.1"
-- Addition of the cavitation fatigue module, xylem parameterization via p12/p50, and the root beta calculation
+09/21/2023 - "2.0.2"
+- Addition of R companion functions to prepare files, and the path-to-file cell for the dataheader.csv and the sumheader.csv in the configuration_2.0.0.csv file.
 
-06/14/2023 - "2.0"
+09/15/2023 - "2.0.1"
+- Addition of the cavitation fatigue module, xylem parameterization via p12/p50, and the root beta calculation.
+
+06/14/2023 - "2.0.0"
 - Creation of a developing branch alongside the new modular version of the model.
 
-11/8/2019 - "0.24"
+11/8/2019 - "0.2.4"
 -Added option to run run from measured (or otherwise generated) predawn canopy water potentials. Set the "predawns mode" option to "y" in parameters.csv to activate. Reads predawn potentials from the "rain" column in MPa (see "dataset - predawns example.csv"). Soil simulation is disabled in this mode, and so rain data is not used.
 
-6/26/2019 - "0.23"
+6/26/2019 - "0.2.3"
 -Review of documentation for inclusion with project data and code archive.
 
-5/7/2019 - "0.22"
+5/7/2019 - "0.2.2"
 -Significant performance improvements, tested between 2-4x faster depending on the platform, compiler and optimization settings.
 -Readme improvements.
 
-4/5/2019 - "0.21"
+4/5/2019 - "0.2.1"
 -Fixed a bug which caused the model to always fail with an error on some platforms.
 
-4/3/2019 - "0.2"
+4/3/2019 - "0.2.0"
 -Additional cleanup of extraneous project-related code, removed more of the commented VBA code, removed two includes which were not in use.
 -Increased floating point output decimal precision to 12 (can change this by editing #define FIO_PRECISION).
 -Reduced console spam.
@@ -26,6 +29,6 @@
 -Somewhat improved summary output (moved over to first column, reduced "0" spam, corrected a header/column alignment issue, fixed the "end of growing season water content" output).
 -Added some details on input/output variables and setting up parameters to readme.txt.
 
-"0.1"
+"0.1.0"
 -Initial version
 -Removed project-specific code, encapsulated model program in a Class, general cleanup.

@@ -174,6 +174,8 @@ __Model Configuratiosn:__
 | Community	| __i_speciesN__	    | Nnumber of species/PFT to run the model.	|
 | Forcing files	| __i_ClimateData__	    | Path to file with climate forcing variables __dataset.csv__	|
 | Forcing files	| __i_GSData__		    | Path to file with growing season data __seasonlimits.2.0.0.csv__	|
+| Forcing files	| __i_dataheader__	    | Path to time-step header file __dataheader.csv__	|
+| Forcing files	| __i_sumheader__	    | Path to annual summary header file __sumheader.csv__	|
 
 ------------
 
