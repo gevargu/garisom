@@ -4,7 +4,7 @@
 ## Author: German Vargas G.
 ## Contact: german.vargas@utah.edu
 ## Version 2.0.0 release date: Jun-2023
-## Current version date: Sept-2023
+## Current version date: v 2.0.2 Sept-2023
 
 ### Model structure (file extensions)
     Garisom
@@ -297,7 +297,7 @@ public:
 
     // Model configuration variables
     bool hysteresis, stem_only;
-    std::string climate_forcing_data_path, growing_season_limits_data_path;
+    std::string climate_forcing_data_path, growing_season_limits_data_path, data_header_file_path, sum_header_file_path;
 
     // Site identifiers & parameters
     std::string species, region, siteID;
@@ -825,9 +825,7 @@ public:
     {
         // try to find a header file
         bool foundHeaderFile = false;
-        std::string headerFileName = "dataheader.csv";
-
-        //std::cout << "Reading data header." << std::endl;
+        std::string headerFileName = data_header_file_path;
 
         std::ifstream headerFile(headerFileName);
         if (!headerFile.is_open())
@@ -838,14 +836,11 @@ public:
             if (headerFile >> dataHeaderRow) // should be the only row in the file
             {
                 foundHeaderFile = true;
-                //std::cout << headerRow << std::endl;
             }
         }
 
         bool foundSumHeaderFile = false;
-        headerFileName = "sumheader.csv";
-
-        //std::cout << "Reading summary header." << std::endl;
+        headerFileName = sum_header_file_path;
 
         std::ifstream sumHeaderFile(headerFileName);
         if (!sumHeaderFile.is_open())
@@ -856,7 +851,6 @@ public:
             if (sumHeaderFile >> summaryHeaderRow) // should be the only row in the file
             {
                 foundSumHeaderFile = true;
-                //std::cout << headerRow << std::endl;
             }
         }
 
@@ -1186,6 +1180,14 @@ public:
         std::cout << "   Path to growing season data: " << std::endl;
         growing_season_limits_data_path = getValueFromConfig("i_GSData");
         std::cout << growing_season_limits_data_path << std::endl;
+
+        std::cout << "  Path to time-step header file: " << std::endl;
+        data_header_file_path = getValueFromConfig("i_dataheader");
+        std::cout << data_header_file_path << std::endl;
+        
+        std::cout << "   Path to annual summary header file: " << std::endl;
+        sum_header_file_path = getValueFromConfig("i_sumheader");
+        std::cout << sum_header_file_path << std::endl;
     }
 
     void readin() //'inputs and calculates all parameters at the start

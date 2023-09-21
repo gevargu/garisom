@@ -94,6 +94,8 @@ community,i_multipleSP,n,turns on/off whether our model configuration has 1 spec
 community,i_speciesN,1,number of species/PFT to run the model for
 forcing_files,i_ClimateData,/Users/usr/Library/Documents/climate_forcing_files/dataset.csv,path to file with climate forcing files
 forcing_files,i_GSData,/Users/usr/Library/Documents/climate_forcing_files/seasonlimits_2.0.0.csv,path to file with growing season length
+forcing_files,i_dataheader,/Users/usr/Library/Documents/program_code/dataheader.csv,Path to time-step header file dataheader.csv
+forcing_files,i_sumheader,/Users/usr/Library/Documents/program_code/sumheader.csv,Path to annual summary header file sumheader.csv
 ,,,
 ,,,
 File: seasonlimits_2.0.0.csv,,,
