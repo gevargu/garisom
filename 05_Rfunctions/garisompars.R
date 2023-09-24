@@ -55,13 +55,13 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
                       i_iter_runSupplyCurve	= FALSE,
                       i_multipleSP	= FALSE,
                       i_speciesN	= 1){
-  print(x = "Loading default values")# for now based on ASPEN values, will based on Venturas et al. 2021
+  cat(x = "Loading default values\n")# for now based on ASPEN values, will based on Venturas et al. 2021
   default.parameters <- matrix(nrow = 68,ncol = 1)
   colnames(default.parameters) <- "PFT_1" 
   row.names(default.parameters) <- c("i_sp","i_region","i_site","i_latitude","i_longitude","i_elevation","i_slopeI","i_slopeA","i_gWaterP","i_gWaterDist","i_atmTrans","i_solarNoon","i_emiss","i_co2AmbPPM","i_layers","i_fieldCapFrac","i_fieldCapPercInit","i_rockFrac","i_soilAbsSol","i_rhizoPer","i_texture","i_baperga","i_leafAreaIndex","i_soilXHeight","i_height","i_treeToPhotoLAI","i_leafPerBasal","i_leafWidth","i_leafAngleParam","i_aspect","i_rootDepth","i_leafPercRes","i_kmaxTree","i_pinc","i_rootP12","i_rootP50","i_stemP12","i_stemP50","i_leafP12","i_leafP50","i_sapwoodT","i_conduitDiam","i_qMax","i_vmax25","i_jmax25","i_kc25","i_ko25","i_comp25","i_thetaC","i_havmax","i_hdvmax","i_svvmax","i_lightCurv","i_lightComp","i_hajmax","i_hdjmax","i_svjmax","i_iter_gwInc","i_iter_gwStart","i_iter_gwEnd","i_iter_ffcInc","i_iter_ffcStart","i_iter_ffcEnd","i_iter_bagaInc","i_iter_bagaStart","i_iter_bagaEnd","i_iter_bagaRef","i_iter_bagaCutoff")
   default.parameters[,"PFT_1"] <- c("Populus tremuloides","Rocky Mountains","POTR-PFT","37.47543","-108.16058","3071","9.6","337.5","0","1","0.75","-15.21070533","0.97","390","5","0.5","100","0.24555","0.94","50","loam","88.55597","1.990195159","1","22.60892422","3.82","1736.379839","0.044555168","1","1","1.15","25","102.5965238","0.00075","-0.501002","-0.803847","-1.002004","-1.607694","-1.503006","-2.411541","0.1316129","23.55","0.3","52.02396278","86.88001785","0.0004048","0.27833131","0.00004275","0.98","73637","149252","486","0.9","30","50300","152044","495","-1.2","12","4","0.2","0.1","1","5","5","150","2","0.5")
   
-  print(x = "Creating files for GARISOM v > 2.0.0 Cpp")
+  cat(x = "Creating files for GARISOM v > 2.0.0 Cpp")
   
   # select the sites for which we will create the files
   parameter_data <- parameter_data[parameter_data$i_site %in% i_site,]
@@ -69,16 +69,16 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
   n_sites <- length(i_site)
   
   for(s in 1:n_sites){
-    print(x = paste("Extracting information for ",i_site[s],sep = ""))
+    cat(x = paste("\nExtracting information for: ",i_site[s],sep = ""))
     
     # Create a directory at the site level
     dir.create(path = paste(data_path,"/",i_site[s],sep = ""),showWarnings = F)
     
     ## Configuration file: configuration_2.0.0.csv ----------------
-    config.file <- matrix(nrow = 3,ncol = 21)
+    config.file <- matrix(nrow = 3,ncol = 23)
     config.file[1,] <- c("soil","soil","soil","climate","climate","climate","hydraulics","hydraulics","hydraulics","hydraulics","baga","baga","baga","baga","baga","baga","community","community","forcing_files","forcing_files","forcing_files","forcing_files","NULL")
     config.file[2,] <- c("i_gWaterEnable","i_soilRedEnable","i_soilEvapEnable","i_rainEnable","i_useGSDataStress","i_useGSDataOpt","i_refilling","i_predawnsMode","i_cavitFatigue","i_stemOnly","i_iter_gwEnable","i_iter_ffcEnable","i_iter_bagaEnable","i_iter_useAreaTable","i_iter_yearsAsCount","i_iter_runSupplyCurve","i_multipleSP","i_speciesN","i_ClimateData","i_GSData","i_dataheader","i_sumheader","NULL")
-    config.file[c(1,2,3),21] <- "NULL"# last column should say NULL, this will avoid problems in Cpp
+    config.file[c(1,2,3),23] <- "NULL"# last column should say NULL, this will avoid problems in Cpp
     model_controls <- config.file[2,]
     N <- length(model_controls)-1
     #### Inputting the model configurations ------------------------------------
@@ -97,7 +97,7 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
     }
     rm(N,pos.config)
     # exporting configuration file ---------------------------------------------
-    print(x = paste("Saving model configuration for:",i_site[s]))
+    cat(x = paste("\nSUCCESS! Saving model configuration for: ",i_site[s]))
     try(write.table(x = config.file,
                     file = paste(data_path,"/",i_site[s],"/","configuration_2.0.0.csv",sep = ""),
                     row.names = FALSE,col.names = FALSE,sep = ",",quote = FALSE))
@@ -129,12 +129,11 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
     rm(Npar,pos.params)
     
     #### 3. exporting parameters file ------------------------------------------
-    print(x = paste("Saving model parameters for:",i_site[s]))
+    cat(x = paste("\nSUCCES! Saving model parameters for: ",i_site[s]))
+    
     try(write.table(x = param.file,
                     file = paste(data_path,"/",i_site[s],"/","parameters_2.0.0.csv",sep = ""),
                     row.names = FALSE,col.names = FALSE,sep = ",",quote = FALSE))
-    
-    print(x = paste("Successfully created files for:",i_site[s]))
   }
-  print(x = paste("DONE"))
+  cat(x = paste("\nDONE"))
 }

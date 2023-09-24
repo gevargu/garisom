@@ -1,10 +1,10 @@
-﻿/* 
+/* 
 # Carbon Gain vs. Hydraulic Risk Stomatal Optimization Model version: 2.0.1
 
 ## Author: German Vargas G.
 ## Contact: german.vargas@utah.edu
 ## Version 2.0.0 release date: Jun-2023
-## Current version date: v 2.0.2 Sept-2023
+## Current version date: v 2.0.3 Sept-2023
 
 ### Model structure (file extensions)
     Garisom
@@ -521,6 +521,9 @@ public:
 
     double gs_ar_Aci[100];
     double gs_ar_AnetDay[100];
+    
+    double gs_ar_rootP50[100];
+    double gs_ar_stemP50[100];
 
     bool isNewYear;
     long gs_yearIndex; //this is a counter from 0 (for the first year) indicating how many years have passed
@@ -1266,8 +1269,6 @@ public:
         p50_r = getValueFromParDbl("i_rootP50",species_no);
         cr = get_cweibull(p12_r,p50_r);// weibull c for each root element
         br = get_bweibull(p12_r,cr);// weibull b for each root element
-        std::cout << "Hydraulics parameterization, root c: " << cr << std::endl;
-        std::cout << "Hydraulics parameterization, root b: " << br << std::endl;
         if (hysteresis == true && stem_only == false)
         {
             sapwoodT = getValueFromParDbl("i_sapwoodT",species_no);
@@ -1276,37 +1277,33 @@ public:
             {
                 p50r_fatigue[0] = p50_r; // current year fresh xylem vulnerability
                 p50r_fatigue[1] = xylem_fatigue_p50(p50_r); // accounting for drought stress in previous year (1 year old)
-                p50_r = ((p50r_fatigue[0] * 1.0) + (p50r_fatigue[1] * 0.75)) / (1.0+0.75); // updated parameter b for roots
+                p50_r = ((p50r_fatigue[0] * 1.0) + (p50r_fatigue[1] * 0.75)) / (1.0+0.75); // updated p50 for roots
             } else if(gs_yearIndex == 2) 
             {
                 p50r_fatigue[0] = p50_r; // current year "fresh xylem"
                 p50r_fatigue[2] = p50r_fatigue[1]; // previous year ring now 1 year older (2 years old)
                 p50r_fatigue[1] = xylem_fatigue_p50(p50_r); // accounting for drought stress in previous year (1 year old)
-                p50_r = ((p50r_fatigue[0] * 1.0) + (p50r_fatigue[1] * 0.75) + (p50r_fatigue[2] * 0.50)) / (1.0+0.75+0.50);// updated parameter b for roots
+                p50_r = ((p50r_fatigue[0] * 1.0) + (p50r_fatigue[1] * 0.75) + (p50r_fatigue[2] * 0.50)) / (1.0+0.75+0.50);// updated p50 for roots
             } else if (gs_yearIndex >= 3)
             {   
                 p50r_fatigue[0] = p50_r;// current year "fresh xylem"
                 p50r_fatigue[3] = p50r_fatigue[2]; // 2 years old ring now 3 years old
                 p50r_fatigue[2] = p50r_fatigue[1]; // previous year ring now 1 year older (2 years old)
                 p50r_fatigue[1] = xylem_fatigue_p50(p50_r); // accounting for drought stress in previous year (1 year old)
-                p50_r = ((p50r_fatigue[0] * 1) + (p50r_fatigue[1] * 0.75) + (p50r_fatigue[2] * 0.5) + (p50r_fatigue[3] * 0.25))/(1.0+0.75+0.5+0.25);// updated parameter b for roots
+                p50_r = ((p50r_fatigue[0] * 1) + (p50r_fatigue[1] * 0.75) + (p50r_fatigue[2] * 0.5) + (p50r_fatigue[3] * 0.25))/(1.0+0.75+0.5+0.25);// updated p50 for roots
             } else 
             {
                 // we don't account for cavitation fatigue in the first year unless we now about it
             }
             cr = get_cweibull(p12_r,p50_r);// weibull c for each root element
             br = get_bweibull(p12_r,cr);// weibull b for each root element
-            std::cout << "Hydraulics parameterization, updated root c: " << cr << std::endl;
-            std::cout << "Hydraulics parameterization, updated root b: " << br << std::endl;
         }
-        
+
         // STEMS
         p12_s = getValueFromParDbl("i_stemP12",species_no);
         p50_s = getValueFromParDbl("i_stemP50",species_no);
         cs = get_cweibull(p12_s,p50_s);// weibull c for each root element
         bs = get_bweibull(p12_s,cs);// weibull b for each root element
-        std::cout << "Hydraulics parameterization, stem c: " << cs << std::endl;
-        std::cout << "Hydraulics parameterization, stem b: " << bs << std::endl;
         if (hysteresis == true)
         {
             sapwoodT = getValueFromParDbl("i_sapwoodT",species_no);
@@ -1335,25 +1332,13 @@ public:
             }
             cs = get_cweibull(p12_s,p50_s);// weibull c for each root element
             bs = get_bweibull(p12_s,cs);// weibull b for each root element
-            std::cout << "Hydraulics parameterization, updated stem c: " << cs << std::endl;
-            std::cout << "Hydraulics parameterization, updated stem b: " << bs << std::endl;
         }
-
+        
         // LEAVES, no histeresis in leaves. Leaf xylem can be replaced//refilled more actively.
         p12_l = getValueFromParDbl("i_leafP12",species_no);
         p50_l = getValueFromParDbl("i_leafP50",species_no);
         cl = get_cweibull(p12_l,p50_l);// weibull c for each root element
         bl = get_bweibull(p12_l,cl);// weibull b for each root element
-        std::cout << "Hydraulics parameterization, leaf c: " << cl << std::endl;
-        std::cout << "Hydraulics parameterization, leaf b: " << bl << std::endl;
-        
-        // OLD PARAMETERIZATION, WILL DELETE...
-        // br = getValueFromParDbl("i_br",species_no); // weibull b for each root element
-        // cr = getValueFromParDbl("i_cr",species_no); // weibull c for each root element
-        // bs = getValueFromParDbl("i_bs",species_no); // weibull b for each stem element
-        // cs = getValueFromParDbl("i_cs",species_no); // weibull c for each stem element
-        // bl = getValueFromParDbl("i_bl",species_no); // weibull b for each leaf element
-        // cl = getValueFromParDbl("i_cl",species_no); // weibull c for each leaf element
 
         leafpercent = getValueFromParDbl("i_leafPercRes",species_no); // saturated % of tree R in leaves
         //[HNT] calculate and output the stem and root percent resistances @ ksat
@@ -2172,7 +2157,8 @@ public:
     }
 
     /* Extract CO2 from growing season data*/
-    double getCarbonByYear(long &yearNum, long (&GSCells)[101][11],const long &maxYears) {
+    double getCarbonByYear(long &yearNum, long (&GSCells)[101][11],const long &maxYears) 
+    {
         long startRow = 2; // skipping the header
         double ca_year;
         for (long gsC = 0; gsC <= maxYears; gsC++)
@@ -4728,6 +4714,8 @@ public:
             ca = getCarbonByYear(yearVal,GSCells,maxYears); // get current year atmospheric CO2
             std::cout << "Atmospheric CO2 concentration for " << yearVal << ": " << ca << std::endl;
             ca = ca * 0.000001;
+            gs_ar_stemP50[gs_yearIndex] = p50_s;// save P50 value
+            gs_ar_rootP50[gs_yearIndex] = p50_r;
         }
 
         jd = dSheet.Cells(rowD + dd, colD + dColDay); //'julian day
@@ -5235,6 +5223,9 @@ long ModelProgram::modelProgramMain() //program starts here
 
     memset(gs_ar_Aci, 0, sizeof(gs_ar_Aci));
     memset(gs_ar_AnetDay, 0, sizeof(gs_ar_AnetDay));
+    
+    memset(gs_ar_rootP50, 0, sizeof(gs_ar_rootP50));
+    memset(gs_ar_stemP50, 0, sizeof(gs_ar_stemP50));
 
     for (k = 0; k <= layers; k++) // k = 0 To layers //assign source pressures, set layer participation
     {
@@ -5348,6 +5339,9 @@ long ModelProgram::modelProgramMain() //program starts here
 
             dSheet.fCells(rowD + iter_Counter + 1 + gsCount /* *40 */, colD /*+ gsCount * 16*/ + dColF_GS_ET + 23) = (gs_ar_Aci[gsCount] / gs_ar_AnetDay[gsCount]) * patm * 1000.0;
             dSheet.fCells(rowD + iter_Counter + 1 + gsCount /* *40 */, colD /*+ gsCount * 16*/ + dColF_GS_ET + 24) = (gs_ar_Aci[gsCount] / gs_ar_AnetDay[gsCount]) / ca;
+            
+            dSheet.fCells(rowD + iter_Counter + 1 + gsCount /* *40 */, colD /*+ gsCount * 16*/ + dColF_GS_ET + 26) = gs_ar_rootP50[gsCount];
+            dSheet.fCells(rowD + iter_Counter + 1 + gsCount /* *40 */, colD /*+ gsCount * 16*/ + dColF_GS_ET + 27) = gs_ar_stemP50[gsCount];
 
             /*memcpy(&testProg, this, sizeof(ModelProgram));
             std::cout << "TEST! My REAL ci/ca " << gs_ar_cica[gsCount] / gs_ar_cica_N[gsCount] << std::endl;
