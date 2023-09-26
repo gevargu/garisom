@@ -83,7 +83,8 @@ Configure plant traits and other parameters in __parameters_2.0.0.csv__ (expecte
 | Group    		| Parameter       	    	| Description										|
 | ---------------------	| ----------------------------- | -------------------------------------------------------------------------------------	|
 | Site			| __i_sp__			| Species or PFT represented in parameter data	|
-| Site			| __i_region__			| Site/simulation ID. This ID is used for naming the result files that are exported	|
+| Site			| __i_region__			| Geographical region of the simulations.	|
+| Site			| __i_site__			| Site/simulation ID. This ID is used for naming the result files that are exported	|
 | Site			| __i_latitude__		| Latitude in degree fraction north.	|
 | Site			| __i_longitude__		| Longitude in degree fraction west.	|
 | Site			| __i_elevation__		| Site elevation in m above sea level.	|
