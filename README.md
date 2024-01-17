@@ -116,6 +116,8 @@ Configure plant traits and other parameters in __parameters_2.0.0.csv__ (expecte
 | Hydraulics		| __i_leafPercRes__		| Saturated % of tree resistance in leaves	|
 | Hydraulics		| __i_kmaxTree__		| Kmax of tree in kg hr-1 m-2 MPa-1 per basal area	|
 | Hydraulics		| __i_pinc__			| Pressure increment for curve generation, (MPa) - higher is faster, but less accurate (setting too high can cause Newton-Rhapson root pressure solving failure)	|
+| Hydraulics		| __i_LSC__			| Leaf specific conductance in mmol m-2 w-1 MPa-1 	|
+| Hydraulics		| __i_LSCpref__			| Water potential for LSC |
 | Hydraulics		| __i_rootP12__			| Root element p12	|
 | Hydraulics		| __i_rootP50__			| Root element p50	|
 | Hydraulics		| __i_stemP12__			| Stem p12	|
