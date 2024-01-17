@@ -54,12 +54,48 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
                       i_iter_yearsAsCount	= FALSE,
                       i_iter_runSupplyCurve	= FALSE,
                       i_multipleSP	= FALSE,
-                      i_speciesN	= 1){
-  cat(x = "Loading default values\n")# for now based on ASPEN values, will based on Venturas et al. 2021
-  default.parameters <- matrix(nrow = 68,ncol = 1)
-  colnames(default.parameters) <- "PFT_1" 
-  row.names(default.parameters) <- c("i_sp","i_region","i_site","i_latitude","i_longitude","i_elevation","i_slopeI","i_slopeA","i_gWaterP","i_gWaterDist","i_atmTrans","i_solarNoon","i_emiss","i_co2AmbPPM","i_layers","i_fieldCapFrac","i_fieldCapPercInit","i_rockFrac","i_soilAbsSol","i_rhizoPer","i_texture","i_baperga","i_leafAreaIndex","i_soilXHeight","i_height","i_treeToPhotoLAI","i_leafPerBasal","i_leafWidth","i_leafAngleParam","i_aspect","i_rootDepth","i_leafPercRes","i_kmaxTree","i_pinc","i_rootP12","i_rootP50","i_stemP12","i_stemP50","i_leafP12","i_leafP50","i_sapwoodT","i_conduitDiam","i_qMax","i_vmax25","i_jmax25","i_kc25","i_ko25","i_comp25","i_thetaC","i_havmax","i_hdvmax","i_svvmax","i_lightCurv","i_lightComp","i_hajmax","i_hdjmax","i_svjmax","i_iter_gwInc","i_iter_gwStart","i_iter_gwEnd","i_iter_ffcInc","i_iter_ffcStart","i_iter_ffcEnd","i_iter_bagaInc","i_iter_bagaStart","i_iter_bagaEnd","i_iter_bagaRef","i_iter_bagaCutoff")
-  default.parameters[,"PFT_1"] <- c("Populus tremuloides","Rocky Mountains","POTR-PFT","37.47543","-108.16058","3071","9.6","337.5","0","1","0.75","0.00","0.97","390","5","0.5","100","0.24555","0.94","50","loam","88.55597","1.990195159","1","22.60892422","3.82","1736.379839","0.044555168","1","1","1.15","25","102.5965238","0.00075","-0.501002","-0.803847","-1.002004","-1.607694","-1.503006","-2.411541","0.1316129","23.55","0.3","52.02396278","86.88001785","0.0004048","0.27833131","0.00004275","0.98","73637","149252","486","0.9","30","50300","152044","495","-1.2","12","4","0.2","0.1","1","5","5","150","2","0.5")
+                      i_speciesN	= 1, mcmc_sample = FALSE){
+  cat(x = "Loading default values\n")# for now based on ASPEN and PIPO values, default values from Venturas et al. 2021
+  default.parameters <- matrix(nrow = 70,ncol = 2)
+  colnames(default.parameters) <- c("PFT_1","PFT_2") 
+  row.names(default.parameters) <- c("i_sp","i_region","i_site","i_latitude","i_longitude","i_elevation","i_slopeI","i_slopeA",
+                                     "i_gWaterP","i_gWaterDist","i_atmTrans","i_solarNoon","i_emiss","i_co2AmbPPM","i_layers",
+                                     "i_fieldCapFrac","i_fieldCapPercInit","i_rockFrac","i_soilAbsSol","i_rhizoPer","i_texture",
+                                     "i_baperga","i_leafAreaIndex","i_soilXHeight","i_height","i_treeToPhotoLAI","i_leafPerBasal",
+                                     "i_leafWidth","i_leafAngleParam","i_aspect","i_rootDepth","i_leafPercRes","i_kmaxTree","i_pinc",
+                                     "i_rootP12","i_rootP50","i_stemP12","i_stemP50","i_leafP12","i_leafP50","i_sapwoodT","i_conduitDiam",
+                                     "i_qMax","i_vmax25","i_jmax25","i_kc25","i_ko25","i_comp25","i_thetaC","i_havmax","i_hdvmax",
+                                     "i_svvmax","i_lightCurv","i_lightComp","i_hajmax","i_hdjmax","i_svjmax",
+                                     "i_iter_gwInc","i_iter_gwStart","i_iter_gwEnd",
+                                     "i_iter_ffcInc","i_iter_ffcStart","i_iter_ffcEnd",
+                                     "i_iter_bagaInc","i_iter_bagaStart","i_iter_bagaEnd","i_iter_bagaRef","i_iter_bagaCutoff",
+                                     "i_LSC","i_LSCpref")
+  
+  default.parameters[,"PFT_1"] <- c("Populus tremuloides","Mountain West","POTR-PFT","37.14111","-111.6725","2104","0.00","270",
+                                    "0","1","0.72","0.00","0.97","390","5",
+                                    "0.5","100","0.05","0.94","50","loam",
+                                    "120","2.01","1","8.78","3.82","865",
+                                    "0.04096","1","1","1.64","50","389.7092","0.00075",
+                                    "-0.74","-2.47","-0.74","-2.47","-0.74","-2.47","0.1314651","23.55",
+                                    "0.3","56.1109","93.7052","0.0004048","0.27833131","0.00004275","0.98","73637","149252",
+                                    "486","0.9","30","50300","152044","495",
+                                    "-1.2","12","4",
+                                    "0.2","0.1","1",
+                                    "5","5","150","2","0.9",
+                                    "12.5375","1")
+  
+  default.parameters[,"PFT_2"] <- c("Pinus ponderosa","Mountain West","PIPO-PFT","35.14111","-111.6725","2104","0.00","270",
+                                    "0","1","0.72","0.00","0.97","390","5",
+                                    "0.5","100","0.05","0.94","50","loam",
+                                    "120","1.01","1.00","13.38","3.05","834",
+                                    "0.0016","1","1","2.93","50","147.62224","0.00075",
+                                    "-1.68","-3.30","-1.68","-3.30","-1.68","-3.30","0.2298123","12.79",
+                                    "0.3","26.6423","44.4926","0.0004048","0.27833131","0.00004275","0.98","73637","149252",
+                                    "486","0.9","30","50300","152044","495",
+                                    "-1.2","12","4",
+                                    "0.2","0.1","1",
+                                    "5","5","150","2","0.5",
+                                    "8.15","0")
   
   cat(x = "Creating files for GARISOM v > 2.0.0 Cpp")
   
@@ -71,8 +107,12 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
   for(s in 1:n_sites){
     cat(x = paste("\nExtracting information for: ",i_site[s],sep = ""))
     
-    # Create a directory at the site level
-    dir.create(path = paste(data_path,"/",i_site[s],sep = ""),showWarnings = F)
+    if(mcmc_sample == TRUE){
+      # do nothing, create files in the parent directory
+    } else {
+      # Create a directory at the site level
+      dir.create(path = paste(data_path,"/",i_site[s],sep = ""),showWarnings = F)
+    }
     
     ## Configuration file: configuration_2.0.0.csv ----------------
     config.file <- matrix(nrow = 3,ncol = 23)
@@ -86,6 +126,9 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
       pos.config <- as.vector(which(x = config.file==model_controls[c],arr.ind = TRUE))
       pos.config[1] <- pos.config[1]+1# get the right row
       if(model_controls[c] %in% c("i_ClimateData","i_GSData","i_dataheader","i_sumheader")){
+        print(model_controls[c])
+        print(i_site[s])
+        print(parameter_data[parameter_data$i_site %in% i_site[s],model_controls[c]])
         config.file[pos.config[1],pos.config[2]] <- parameter_data[parameter_data$i_site == i_site[s],model_controls[c]]
       } else {
         if(isTRUE(get(model_controls[c]))){
@@ -98,31 +141,42 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
     rm(N,pos.config)
     # exporting configuration file ---------------------------------------------
     cat(x = paste("\nSUCCESS! Saving model configuration for: ",i_site[s]))
-    try(write.table(x = config.file,
-                    file = paste(data_path,"/",i_site[s],"/","configuration_2.0.0.csv",sep = ""),
-                    row.names = FALSE,col.names = FALSE,sep = ",",quote = FALSE))
+    if(mcmc_sample == TRUE){
+      try(write.table(x = config.file,
+                      file = paste(data_path,"/","configuration_2.0.0.csv",sep = ""),
+                      row.names = FALSE,col.names = FALSE,sep = ",",quote = FALSE))
+    } else {
+      try(write.table(x = config.file,
+                      file = paste(data_path,"/",i_site[s],"/","configuration_2.0.0.csv",sep = ""),
+                      row.names = FALSE,col.names = FALSE,sep = ",",quote = FALSE))
+    }
     
     ## Parameters file: paremeters_2.0.0.csv ----------------
     #### 1. create parameter matrix where each line is a species/pft -----------
-    param.file <- matrix(nrow = 2+i_speciesN,ncol = 69)
-    param.file[1,] <- c("site","site","site","site","site","site","site","site","site","site","atmosphere","atmosphere","atmosphere","atmosphere","soil","soil","soil","soil","soil","soil","soil","stand","stand","stand","stand","stand","stand","tree","tree","tree","tree","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","NULL")
-    param.file[2,] <- c("i_sp","i_region","i_site","i_latitude","i_longitude","i_elevation","i_slopeI","i_slopeA","i_gWaterP","i_gWaterDist","i_atmTrans","i_solarNoon","i_emiss","i_co2AmbPPM","i_layers","i_fieldCapFrac","i_fieldCapPercInit","i_rockFrac","i_soilAbsSol","i_rhizoPer","i_texture","i_baperga","i_leafAreaIndex","i_soilXHeight","i_height","i_treeToPhotoLAI","i_leafPerBasal","i_leafWidth","i_leafAngleParam","i_aspect","i_rootDepth","i_leafPercRes","i_kmaxTree","i_pinc","i_rootP12","i_rootP50","i_stemP12","i_stemP50","i_leafP12","i_leafP50","i_sapwoodT","i_conduitDiam","i_qMax","i_vmax25","i_jmax25","i_kc25","i_ko25","i_comp25","i_thetaC","i_havmax","i_hdvmax","i_svvmax","i_lightCurv","i_lightComp","i_hajmax","i_hdjmax","i_svjmax","i_iter_gwInc","i_iter_gwStart","i_iter_gwEnd","i_iter_ffcInc","i_iter_ffcStart","i_iter_ffcEnd","i_iter_bagaInc","i_iter_bagaStart","i_iter_bagaEnd","i_iter_bagaRef","i_iter_bagaCutoff","NULL")
-    param.file[3,69] <- "NULL"# last column should say NULL, this will avoid problems in Cpp
+    param.file <- matrix(nrow = 2+i_speciesN,ncol = 71)
+    param.file[1,] <- c("site","site","site","site","site","site","site","site","site","site","atmosphere","atmosphere","atmosphere","atmosphere","soil","soil","soil","soil","soil","soil","soil","stand","stand","stand","stand","stand","stand","tree","tree","tree","tree","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","hydraulics","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","photosynthesis","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","BAGA_optimizer","hydraulics","hydraulics","NULL")
+    param.file[2,] <- c("i_sp","i_region","i_site","i_latitude","i_longitude","i_elevation","i_slopeI","i_slopeA","i_gWaterP","i_gWaterDist","i_atmTrans","i_solarNoon","i_emiss","i_co2AmbPPM","i_layers","i_fieldCapFrac","i_fieldCapPercInit","i_rockFrac","i_soilAbsSol","i_rhizoPer","i_texture","i_baperga","i_leafAreaIndex","i_soilXHeight","i_height","i_treeToPhotoLAI","i_leafPerBasal","i_leafWidth","i_leafAngleParam","i_aspect","i_rootDepth","i_leafPercRes","i_kmaxTree","i_pinc","i_rootP12","i_rootP50","i_stemP12","i_stemP50","i_leafP12","i_leafP50","i_sapwoodT","i_conduitDiam","i_qMax","i_vmax25","i_jmax25","i_kc25","i_ko25","i_comp25","i_thetaC","i_havmax","i_hdvmax","i_svvmax","i_lightCurv","i_lightComp","i_hajmax","i_hdjmax","i_svjmax","i_iter_gwInc","i_iter_gwStart","i_iter_gwEnd","i_iter_ffcInc","i_iter_ffcStart","i_iter_ffcEnd","i_iter_bagaInc","i_iter_bagaStart","i_iter_bagaEnd","i_iter_bagaRef","i_iter_bagaCutoff","i_LSC","i_LSCpref","NULL")
+    param.file[3,71] <- "NULL"# last column should say NULL, this will avoid problems in Cpp
     params <- param.file[2,]
     Npar <- length(params)-1
     #### 2. loop over parameters and save them ---------------------------------
     # NOTE: if parameter value is empty or NA or does not exist in the df we input a default
-    # TODO: add default values for generic PFTs according to the literature
     
     for(i in 1:i_speciesN){
       nsp <- i# account for the number of species
       for(p in 1:Npar){
+        SP <- parameter_data[parameter_data$i_site %in% i_site[s],"i_sp"]
         pos.params <- as.vector(which(x = param.file==params[p],arr.ind = TRUE))
         pos.params[1] <- pos.params[1] + nsp # the parameter row plus the species
         if(params[p] %in% colnames(parameter_data)){# user values
-          param.file[pos.params[1],pos.params[2]] <- parameter_data[parameter_data$i_site %in% i_site[1],params[p]]
+          param.file[pos.params[1],pos.params[2]] <- parameter_data[parameter_data$i_site %in% i_site[s],params[p]]
         } else { # default values
-          param.file[pos.params[1],pos.params[2]] <- default.parameters[params[p],"PFT_1"]
+          if(SP == "POTR"){
+            param.file[pos.params[1],pos.params[2]] <- default.parameters[params[p],"PFT_1"]
+          } else {
+            param.file[pos.params[1],pos.params[2]] <- default.parameters[params[p],"PFT_2"]
+          }
+          
         }
       }
     }
@@ -130,10 +184,16 @@ garisompars <- function(parameter_data,#data frame with the parameter info, this
     
     #### 3. exporting parameters file ------------------------------------------
     cat(x = paste("\nSUCCES! Saving model parameters for: ",i_site[s]))
+    if(mcmc_sample == TRUE){
+      try(write.table(x = param.file,
+                      file = paste(data_path,"/","parameters_2.0.0.csv",sep = ""),
+                      row.names = FALSE,col.names = FALSE,sep = ",",quote = FALSE))
+    } else {
+      try(write.table(x = param.file,
+                      file = paste(data_path,"/",i_site[s],"/","parameters_2.0.0.csv",sep = ""),
+                      row.names = FALSE,col.names = FALSE,sep = ",",quote = FALSE))
+    }
     
-    try(write.table(x = param.file,
-                    file = paste(data_path,"/",i_site[s],"/","parameters_2.0.0.csv",sep = ""),
-                    row.names = FALSE,col.names = FALSE,sep = ",",quote = FALSE))
   }
   cat(x = paste("\nDONE"))
 }

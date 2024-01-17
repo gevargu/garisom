@@ -1,3 +1,6 @@
+01/16/2024 - "2.0.4"
+- Added lines to calculate KmaxPlant from leaf specific conductance and LA:BA.
+
 09/24/2023 - "2.0.3"
 - Added lines of code to export yearly P50 values given damage in xylem from previous year
 

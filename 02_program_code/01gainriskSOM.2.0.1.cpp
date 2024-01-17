@@ -4,7 +4,7 @@
 ## Author: German Vargas G.
 ## Contact: german.vargas@utah.edu
 ## Version 2.0.0 release date: Jun-2023
-## Current version date: v 2.0.3 Sept-2023
+## Current version date: v 2.0.4 Jan-2023
 
 ### Model structure (file extensions)
     Garisom
@@ -20,7 +20,7 @@
             Makefile
         
         c) Program code (cpp):
-            gainriskSOM_2.0.0.cpp
+            gainriskSOM_2.0.4.cpp
         
         d) Model structure: The model has multiple functions and classess that together perform the calculations.
 
@@ -33,6 +33,7 @@
     3. It accounts for increases in atmospheric CO2.
     4. Estimation of weibull parameters via p12 and p50, which facilitates data acquisition.
     5. Also includes a cavitation fatigue module to re-calculate p50 and subsequently the weibull c and b parameters while accounting for previous year damage to the xylem.
+    6. Kmax for the plant can be inputed or calculated from leaf specific conductance and LA:BA
 
 ### Notes on future updates:
     1. Addition of a data assimilation routine to facilitate iterative forecasting. Will do using PEcAn.
@@ -319,6 +320,8 @@ public:
     // Plant hydrodynamics
     double p12_r, p50_r, p12_s, p50_s, p12_l, p50_l, br, cr, bs, cs, bl, cl, leafpercent, ksatp, pinc;
     double meanPLC, oldmeanPLC, sapwoodT, conduitD, p50s_fatigue[4], p50r_fatigue[4];// Xylem hysteresis routine
+    double lsc_max, lsc_input, lsc_pref;
+    std::string ksatpcalc;
 
     // Carbon assimilation
     double lightcomp, qmax, vmax25, jmax25, kc25, ko25, comp25, thetac, havmax, hdvmax, svvmax, hajmax, hdjmax, svjmax, lightcurv;
@@ -1341,10 +1344,16 @@ public:
         bl = get_bweibull(p12_l,cl);// weibull b for each root element
 
         leafpercent = getValueFromParDbl("i_leafPercRes",species_no); // saturated % of tree R in leaves
-        //[HNT] calculate and output the stem and root percent resistances @ ksat
-        double stempercent = 1.0 / 3.0 * (100.0 - leafpercent); // saturated % of tree R in stem
-        double rootpercent = 2.0 / 3.0 * (100.0 - leafpercent); // saturated % of tree R in roots
         ksatp = getValueFromParDbl("i_kmaxTree",species_no); // kmax of tree in kg hr - 1m - 2MPa - 1 per basal area
+        ksatpcalc = "old";
+        if (ksatp <= 0)
+        {
+            lsc_input = getValueFromParDbl("i_LSC", species_no);// LSC
+            lsc_pref = getValueFromParDbl("i_LSCpref", species_no);// LSCPref
+            lsc_max = lsc_input / (std::exp(-(std::pow((lsc_pref / bl), cl))));//--//
+            ksatpcalc = "new";
+        }
+        
         pinc = getValueFromParDbl("i_pinc",species_no); // MPa increment for global K(P) curves...has to be small enough for NR convergence.
         if (pinc <= 0)
         {
@@ -1371,11 +1380,35 @@ public:
         // initial conditions calculations ---------------------------------------------------------------------------------------------------------
         gmaxl = gmax * (1.0 / laperba) * (1 / 3600.0) * 55.56 * 1000.0; //convert to gmax per leaf area in mmol m-2s-1
         patm = 101.325 * pow((1 - 0.0065 * alt / (288.15 + 0.0065 * alt)), 5.257); //atmospheric pressure, T = 15 C, average sealevel patm; approximation
-        ksatl = ksatp * (100.0 / leafpercent); // leaf conductance per basal area
-        lsc = ksatl * 1.0 / laperba; // lsc in kg hr-1m-2MPa-1//lsc per leaf area in kg hr - 1
-        rsatp = 1.0 / ksatp; // convert to resistance
-        ksatroot = 1.0 / ((rootpercent / 100.0) * rsatp); // kmax of root system; assumes zero % rhizosphere resistance in WET soil
-        ksats = 1.0 / ((stempercent / 100.0) * rsatp); // kmax of stem system
+        if (ksatpcalc == "old")
+        {   
+            //[HNT] calculate and output the stem and root percent resistances @ ksat
+            double stempercent = 1.0 / 3.0 * (100.0 - leafpercent); // saturated % of tree R in stem
+            double rootpercent = 2.0 / 3.0 * (100.0 - leafpercent); // saturated % of tree R in roots
+            ksatl = ksatp * (100.0 / leafpercent); // leaf conductance per basal area
+            lsc = ksatl * 1.0 / laperba; // lsc in kg hr-1m-2MPa-1//lsc per leaf area in kg hr - 1
+            rsatp = 1.0 / ksatp; // convert to resistance
+            ksatroot = 1.0 / ((rootpercent / 100.0) * rsatp); // kmax of root system; assumes zero % rhizosphere resistance in WET soil
+            ksats = 1.0 / ((stempercent / 100.0) * rsatp); // kmax of stem system
+            std::cout << "Conductance calculations (old mode): kMaxTree = " << ksatp << " lsc = " << lsc << " kMaxStem = " << ksats << " kMaxRoot = " << ksatroot << std::endl;
+        } else {
+            lsc_max = lsc_max * 3600.0 * 0.000018;
+            ksatl = lsc_max * laperba;
+
+            double rSatLeaf = 1.0 / ksatl; // 25%
+            double rSatStem = 1.0 * rSatLeaf; // 25%
+            double rSatRoot = 2.0 * rSatLeaf; // 50%
+
+            double rSatTree = rSatLeaf + rSatStem + rSatRoot;
+            ksatp = 1.0 / rSatTree;
+            rsatp = rSatTree;
+            lsc = lsc_max;
+            ksatroot = 1.0 / rSatRoot;
+            ksats = 1.0 / rSatStem;
+
+            // any chance this worked? (later me: It did, once I remembered the unit conversion for lscMax)
+            std::cout << "Conductance calculations: kMaxTree = " << ksatp << " lsc = " << lsc << " kMaxStem = " << ksats << " kMaxRoot = " << ksatroot << std::endl;
+        }
         pgrav = height * 0.01; //pressure drop from gravity in MPa
         einc = ksatp / 500.0; //e increment in kg hr-1 m-2 basal area for composite curve
         kmin = ksatp / 2000.0; //"instantaneous K" cutoff for global K(P) curves for each element
