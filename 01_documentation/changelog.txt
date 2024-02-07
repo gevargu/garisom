@@ -1,3 +1,6 @@
+02/06/2024 - "1.2.5"
+- Discovered fatal errors in version 2.0.4, working again with version 1.2.4
+
 01/16/2024 - "2.0.4"
 - Added lines to calculate KmaxPlant from leaf specific conductance and LA:BA.
 
