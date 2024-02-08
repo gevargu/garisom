@@ -1,3 +1,11 @@
+02/06/2024 - "2.0.5"
+- Addressed fatal errors in version 2.0.4, working again with version 2.0.5
+    - Errors were associated to numerical instabilities on the following calculations:
+        - Calculating beta from rooting depth.
+        - Calculating weibull parameters from p12 and p50.
+    - Fixed by setting up parameter entry to be weibull b, weibull c, and root beta.
+    - Cavitation fatigue module still works properly.
+
 02/06/2024 - "1.2.5"
 - Discovered fatal errors in version 2.0.4, working again with version 1.2.4
 
