@@ -112,18 +112,18 @@ Configure plant traits and other parameters in __parameters_2.0.0.csv__ (expecte
 | Tree			| __i_leafWidth__		| Leaf width in m	|
 | Tree			| __i_leafAngleParam__		| Leaf angle parameter; CN 15.4	|
 | Tree			| __i_aspect__			| Max radius of root system per max depth	|
-| Tree			| __i_rootDepth__		| Maximum rooting depth in m	|
+| Tree			| __i_rootBeta__		| Root biomass distribution is allocated based on the equation reported in Love et al (2019): M = 1 - Beta^d, where M is the fraction of biomass above depth d expressed in cm. We find the Beta that provides an M of 0.995 for the maximum rooting depth.	|
 | Hydraulics		| __i_leafPercRes__		| Saturated % of tree resistance in leaves	|
 | Hydraulics		| __i_kmaxTree__		| Kmax of tree in kg hr-1 m-2 MPa-1 per basal area	|
 | Hydraulics		| __i_pinc__			| Pressure increment for curve generation, (MPa) - higher is faster, but less accurate (setting too high can cause Newton-Rhapson root pressure solving failure)	|
 | Hydraulics		| __i_LSC__			| Leaf specific conductance in mmol m-2 w-1 MPa-1 	|
 | Hydraulics		| __i_LSCpref__			| Water potential for LSC |
-| Hydraulics		| __i_rootP12__			| Root element p12	|
-| Hydraulics		| __i_rootP50__			| Root element p50	|
-| Hydraulics		| __i_stemP12__			| Stem p12	|
-| Hydraulics		| __i_stemP50__			| Stem p50	|
-| Hydraulics		| __i_leafP12__			| Leaf p12	|
-| Hydraulics		| __i_leafP50__			| Leaf p50	|
+| Hydraulics		| __i_cr__			| Root element Weibull parameter c	|
+| Hydraulics		| __i_br__			| Root element Weibull parameter b	|
+| Hydraulics		| __i_cs__			| Stem element Weibull parameter c	|
+| Hydraulics		| __i_bs__			| Stem element Weibull parameter b	|
+| Hydraulics		| __i_cl__			| Leaf element Weibull parameter c	|
+| Hydraulics		| __i_bl__			| Leaf element Weibull parameter b	|
 | Hydraulics		| __i_sapwoodT__		| Change in sapwood per change in diameter at breast height	|
 | Hydraulics		| __i_conduitDiam__		| Vessel or tracheid diameter in um	|
 | Photosynthesis	| __i_qMax__			| Quantum yield of electron transport; moles e per mols photons	|
